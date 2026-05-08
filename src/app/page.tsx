@@ -213,7 +213,14 @@ function HomeContent() {
 
     useEffect(() => {
         setIsMounted(true);
-        const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+        const checkMobile = () => {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            // 웹사이트 첫 진입 시 자동으로 INFO(텍스트)가 펼쳐지도록 설정 (데스크탑 기준)
+            if (!mobile) {
+                setIsInfoExpanded(true);
+            }
+        };
         checkMobile();
         window.addEventListener('resize', checkMobile);
 
