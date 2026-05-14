@@ -1,11 +1,14 @@
-import { chatbotBridgeError, forwardChatbotRequest } from "../_bridge";
+import { listChatbotPages } from "@/features/iyohouse-chatbot/server/chatbot-service";
+import { chatbotJson, chatbotRouteError } from "../_responses";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    return await forwardChatbotRequest("/api/pages");
+    const pages = await listChatbotPages();
+    return chatbotJson(pages);
   } catch (error) {
-    return chatbotBridgeError(error);
+    return chatbotRouteError(error);
   }
 }
