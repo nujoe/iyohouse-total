@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function SuccessContent() {
@@ -9,18 +9,26 @@ function SuccessContent() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [msg, setMsg] = useState("결제 승인 중...");
 
+  /** Strict Mode / 새로고침 / 느린 네트워크 상황에서 중복 confirm 요청 방지 */
+  const confirmedRef = useRef(false);
+
   const paymentKey = searchParams.get("paymentKey");
   const orderId = searchParams.get("orderId");
   const amount = searchParams.get("amount");
   const registrationId = searchParams.get("registration_id");
 
   useEffect(() => {
+    if (confirmedRef.current) return;
+
     const confirmPayment = async () => {
       if (!paymentKey || !orderId || !amount || !registrationId) {
         setStatus("error");
         setMsg("결제 정보가 부족합니다.");
         return;
       }
+
+      // 즉시 플래그를 세워 동일 mount 내 재진입 차단
+      confirmedRef.current = true;
 
       try {
         const response = await fetch("/api/payment/confirm", {
@@ -45,6 +53,8 @@ function SuccessContent() {
       } catch {
         setStatus("error");
         setMsg("서버와 통신 중 오류가 발생했습니다.");
+        // 네트워크 에러 시 재시도 가능하도록 플래그 복원
+        confirmedRef.current = false;
       }
     };
 

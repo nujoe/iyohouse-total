@@ -23,15 +23,14 @@ async function getRegistrationCounts() {
   try {
     const supabase = getSupabaseServerClient()
     const { data, error } = await supabase
-      .from('workshop_registrations_v2')
-      .select('workshop_id')
-      .eq('status', 'confirmed')
+      .from('workshop_registration_counts')
+      .select('workshop_id, confirmed_count')
 
     if (error) throw error
 
-    return (data || []).reduce<Record<string, number>>((acc, registration) => {
-      if (typeof registration.workshop_id === 'string' && registration.workshop_id) {
-        acc[registration.workshop_id] = (acc[registration.workshop_id] || 0) + 1
+    return (data || []).reduce<Record<string, number>>((acc, row) => {
+      if (typeof row.workshop_id === 'string' && row.workshop_id) {
+        acc[row.workshop_id] = Number(row.confirmed_count)
       }
 
       return acc

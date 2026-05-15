@@ -126,9 +126,11 @@ function HomeContent() {
                 if (entry.target === logoRef.current) {
                     const width = entry.borderBoxSize?.[0]?.inlineSize || entry.contentRect.width;
                     const height = entry.borderBoxSize?.[0]?.blockSize || entry.contentRect.height;
-                    setLogoWidth(`${width}px`);
+                    const nextWidth = `${width}px`;
                     // 텍스트 아래로 넉넉하게 내려가도록 20px 오프셋 추가
-                    setLogoHeight(`${height + 20}px`);
+                    const nextHeight = `${height + 20}px`;
+                    setLogoWidth(prev => prev === nextWidth ? prev : nextWidth);
+                    setLogoHeight(prev => prev === nextHeight ? prev : nextHeight);
                 }
             }
         });
@@ -160,7 +162,11 @@ function HomeContent() {
     const [selectedSession, setSelectedSession] = useState<any | null>(null);
 
     useEffect(() => {
-        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || "test_ck_ALnQvDd2VJl6vpNz1RRO8Mj7X41m";
+        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+        if (!clientKey) {
+            console.error('[TossPayments] NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.');
+            return;
+        }
         loadTossPayments(clientKey).then(setTossPayments);
     }, []);
 
@@ -178,7 +184,7 @@ function HomeContent() {
             if (found) {
                 setSelectedWorkshop(found);
                 setActivePreset('workshop');
-                setVisited(v => ({ ...v, workshop: true }));
+                setVisited(v => v.workshop ? v : { ...v, workshop: true });
                 setSelectedSession(null);
                 setShowSchedule(false);
                 return;
@@ -187,7 +193,7 @@ function HomeContent() {
 
         if (presetId) {
             setActivePreset(presetId);
-            setVisited(v => ({ ...v, [presetId]: true }));
+            setVisited(v => v[presetId] ? v : { ...v, [presetId]: true });
             setSelectedWorkshop(null);
         } else {
             setSelectedWorkshop(null);
@@ -213,7 +219,7 @@ function HomeContent() {
             return;
         }
         setIsContactOpen(false);
-        setVisited(v => ({ ...v, [preset]: true }));
+        setVisited(v => v[preset] ? v : { ...v, [preset]: true });
         const params = new URLSearchParams(createQueryString('preset', preset === 'main' ? null : preset));
         params.delete('workshop');
         router.push(`${pathname}${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
@@ -316,7 +322,11 @@ function HomeContent() {
         // 1. Initialize Toss Payments before pending registration
         let payments = tossPayments;
         if (!payments) {
-            const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || "test_ck_ALnQvDd2VJl6vpNz1RRO8Mj7X41m";
+            const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+            if (!clientKey) {
+                alert("결제 시스템이 올바르게 설정되지 않았습니다. 관리자에게 문의해 주세요.");
+                return;
+            }
             payments = await loadTossPayments(clientKey);
             setTossPayments(payments);
         }

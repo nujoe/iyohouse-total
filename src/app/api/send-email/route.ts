@@ -14,8 +14,20 @@ function getClientKey(request: Request) {
 
 function isRateLimited(key: string) {
   const now = Date.now()
+
+  // 1. Periodic cleanup if the map gets too large
+  // This prevents memory exhaustion from unique IP brute-forcing
+  if (attempts.size > 1000) {
+    for (const [k, v] of attempts.entries()) {
+      if (v.resetAt <= now) {
+        attempts.delete(k)
+      }
+    }
+  }
+
   const current = attempts.get(key)
 
+  // 2. On-access cleanup: If expired, reset or delete
   if (!current || current.resetAt <= now) {
     attempts.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
     return false

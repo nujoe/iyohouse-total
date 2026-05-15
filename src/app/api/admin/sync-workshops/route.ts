@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from 'next-sanity'
 import { apiVersion, dataset, projectId } from '@/sanity/env'
 import { getSupabaseServerClient } from '@/lib/supabase/admin'
@@ -35,7 +35,57 @@ function getFallbackEndAt() {
   return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString()
 }
 
-export async function GET() {
+// ---------------------------------------------------------------------------
+// Auth helper – validates Bearer token against ADMIN_SYNC_SECRET env var
+// ---------------------------------------------------------------------------
+function verifyAdminSecret(request: NextRequest):
+  | { ok: true }
+  | { ok: false; response: NextResponse } {
+  const secret = process.env.ADMIN_SYNC_SECRET
+
+  if (!secret) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { success: false, error: 'ADMIN_SYNC_SECRET is not configured on the server.' },
+        { status: 500 },
+      ),
+    }
+  }
+
+  const authHeader = request.headers.get('authorization') ?? ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+
+  if (!token || token !== secret) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { success: false, error: 'Unauthorized – invalid or missing Bearer token.' },
+        { status: 401 },
+      ),
+    }
+  }
+
+  return { ok: true }
+}
+
+// ---------------------------------------------------------------------------
+// GET is no longer allowed – return 405 Method Not Allowed
+// ---------------------------------------------------------------------------
+export function GET() {
+  return NextResponse.json(
+    { success: false, error: 'Method Not Allowed. Use POST.' },
+    { status: 405, headers: { Allow: 'POST' } },
+  )
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/sync-workshops  (protected)
+// ---------------------------------------------------------------------------
+export async function POST(request: NextRequest) {
+  const auth = verifyAdminSecret(request)
+  if (!auth.ok) return auth.response
+
   try {
     const supabase = getSupabaseServerClient()
 

@@ -31,9 +31,21 @@ export async function POST(request: Request) {
     }
 
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('환경 변수 누락: NEXT_PUBLIC_SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY')
+      return NextResponse.json(
+        { success: false, error: '서버 설정 오류: 환경 변수가 누락되었습니다.' },
+        { status: 500 },
+      )
+    }
+
     const serviceRoleClient = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      supabaseUrl,
+      serviceRoleKey,
     )
 
     const { error: updateError } = await serviceRoleClient
