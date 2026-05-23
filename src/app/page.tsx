@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useWorkshopData } from "@/hooks/useWorkshopData";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { useGridLayout } from "@/hooks/useGridLayout";
 import GridLines from "@/components/GridLines";
 import WorkshopGrid from "@/components/WorkshopGrid";
@@ -13,21 +14,13 @@ import HomeMainCell from "@/components/home/HomeMainCell";
 import HomeMemberCell from "@/components/home/HomeMemberCell";
 import MobileMenu from "@/components/home/MobileMenu";
 import LoginModal from "@/components/home/LoginModal";
+import ContactSidebar from "@/components/home/ContactSidebar";
 import WorkshopDetailPoster from "@/components/workshop/WorkshopDetailPoster";
 import WorkshopDetailOverlay from "@/components/workshop/WorkshopDetailOverlay";
 
 import ChatbotWidget from "@/features/iyohouse-chatbot/components/ChatbotWidget";
 import { useLanguage } from "@/lib/i18n";
-import {
-    getLocalizedCurriculumItem,
-    getLocalizedScheduleSession,
-    getLocalizedWorkshopDescription,
-    getLocalizedWorkshopTitle,
-    getLocalizedWorkshopTutor,
-    getLocalizedWorkshopTutorBio,
-    getScheduleSessionLabel,
-} from "@/lib/i18n/workshopLocalization";
-import { loadTossPayments } from "@tosspayments/payment-sdk";
+
 
 const getTagColor = (tag: string) => {
     const t = tag.toUpperCase().trim();
@@ -90,6 +83,7 @@ function HomeContent() {
     const [currentMonth, setCurrentMonth] = useState(HYDRATION_SAFE_CALENDAR_MONTH);
     const [isContactOpen, setIsContactOpen] = useState(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [loginModalMode, setLoginModalMode] = useState<"login" | "signup">("login");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const logoRef = useRef<HTMLDivElement>(null);
     const [logoWidth, setLogoWidth] = useState("32rem");
@@ -113,16 +107,7 @@ function HomeContent() {
         setCurrentMonth(getClientCurrentMonth());
     }, []);
 
-    const getCurrentNextPath = useCallback(() => {
-        const query = searchParams.toString();
-        return `${pathname}${query ? `?${query}` : ''}`;
-    }, [pathname, searchParams]);
-
-    const goToCompleteProfile = useCallback(() => {
-        const currentPath = getCurrentNextPath();
-        const nextPath = currentPath.startsWith('/complete-profile') ? '/' : currentPath;
-        router.push(`/complete-profile?next=${encodeURIComponent(nextPath)}`);
-    }, [getCurrentNextPath, router]);
+    const { goToCompleteProfile, getCurrentNextPath } = useProfileNavigation();
 
     // 인증 후 프로필 미완성 시 전용 가입 완료 페이지로 이동
     useEffect(() => {
@@ -171,21 +156,7 @@ function HomeContent() {
 
     const [visited, setVisited] = useState<Record<string, boolean>>({ main: true });
 
-    const [contactData, setContactData] = useState({ email: '', subject: '', message: '' });
-    const [isSending, setIsSending] = useState(false);
-    const [tossPayments, setTossPayments] = useState<any>(null);
-    const [showSchedule, setShowSchedule] = useState(false);
-    const [selectedSession, setSelectedSession] = useState<any | null>(null);
-    const [showRefundPolicy, setShowRefundPolicy] = useState(false);
 
-    useEffect(() => {
-        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-        if (!clientKey) {
-            console.error('[TossPayments] NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.');
-            return;
-        }
-        loadTossPayments(clientKey).then(setTossPayments);
-    }, []);
 
     useEffect(() => {
         const workshopId = searchParams.get('workshop');
@@ -202,9 +173,6 @@ function HomeContent() {
                 setSelectedWorkshop(found);
                 setActivePreset('workshop');
                 setVisited(v => v.workshop ? v : { ...v, workshop: true });
-                setSelectedSession(null);
-                setShowSchedule(false);
-                setShowRefundPolicy(false);
                 return;
             }
         }
@@ -213,11 +181,9 @@ function HomeContent() {
             setActivePreset(presetId);
             setVisited(v => v[presetId] ? v : { ...v, [presetId]: true });
             setSelectedWorkshop(null);
-            setShowRefundPolicy(false);
         } else {
             setSelectedWorkshop(null);
             setActivePreset('main');
-            setShowRefundPolicy(false);
         }
     }, [searchParams, sanityWorkshops]);
 
@@ -245,10 +211,6 @@ function HomeContent() {
         router.push(`${pathname}${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
         setActivePreset(preset);
         setSelectedWorkshop(null);
-
-        setSelectedSession(null);
-        setShowSchedule(false);
-        setShowRefundPolicy(false);
         setIsContactOpen(false);
     }, [createQueryString, pathname, router]);
 
@@ -264,136 +226,9 @@ function HomeContent() {
 
 
 
-    const handleContactSubmit = useCallback(async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!contactData.email || !contactData.message) {
-            alert(t.contact.required);
-            return;
-        }
-        setIsSending(true);
-        try {
-            const response = await fetch('/api/send-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(contactData),
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert(t.contact.success);
-                setContactData({ email: '', subject: '', message: '' });
-            } else throw new Error(result.error);
-        } catch (error) {
-            console.error('이메일 전송 실패:', error);
-            alert(t.contact.error);
-        } finally { setIsSending(false); }
-    }, [contactData, t]);
 
-    const getWorkshopCapacity = useCallback((workshop: any) =>
-        typeof workshop?.capacity === 'number' ? workshop.capacity : 8, []);
 
-    const getWorkshopPaidCount = useCallback((workshop: any) => {
-        const dbId = workshop?.supabase_workshop_id;
-        return dbId ? registrationCounts[dbId] || 0 : 0;
-    }, [registrationCounts]);
 
-    const getWorkshopSchedule = useCallback((workshop: any) =>
-        Array.isArray(workshop?.schedule)
-            ? workshop.schedule.filter((session: any) => session?.date || session?.time)
-            : [], []);
-
-    const hasSelectableSchedule = useCallback((workshop: any) => getWorkshopSchedule(workshop).length > 0, [getWorkshopSchedule]);
-
-    const isWorkshopClosedForPayment = useCallback((workshop: any) => {
-        const isLegacyClosed = !workshop?.isSanity && Number(workshop?.id) <= 11;
-        return Boolean(
-            workshop?.isClosed ||
-            isLegacyClosed ||
-            getWorkshopPaidCount(workshop) >= getWorkshopCapacity(workshop)
-        );
-    }, [getWorkshopCapacity, getWorkshopPaidCount]);
-
-    const handleWorkshopPayment = useCallback(async (workshop: any) => {
-        if (!user) {
-            setIsLoginModalOpen(true);
-            return;
-        }
-
-        if (!isProfileComplete) {
-            goToCompleteProfile();
-            return;
-        }
-
-        const dbWorkshopId = workshop.supabase_workshop_id;
-        if (!dbWorkshopId) {
-            alert(t.workshop.missingDbId);
-            return;
-        }
-
-        if (isWorkshopClosedForPayment(workshop)) {
-            alert(t.workshop.closedAlert);
-            return;
-        }
-
-        if (hasSelectableSchedule(workshop) && !selectedSession) {
-            alert(t.workshop.scheduleRequired);
-            setShowSchedule(true);
-            return;
-        }
-
-        // 1. Initialize Toss Payments before pending registration
-        let payments = tossPayments;
-        if (!payments) {
-            const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-            if (!clientKey) {
-                alert(t.workshop.paymentMisconfigured);
-                return;
-            }
-            payments = await loadTossPayments(clientKey);
-            setTossPayments(payments);
-        }
-
-        if (!payments) {
-            alert(t.workshop.paymentPreparing);
-            return;
-        }
-
-        try {
-            // 2. Create pending registration via RPC
-            const { data: regData, error: rpcError } = await supabase.rpc('create_pending_registration', {
-                p_workshop_id: dbWorkshopId,
-            });
-
-            if (rpcError) throw rpcError;
-
-            // regData contains { registration_id, order_id, amount, workshop_title }
-            const { registration_id, order_id, amount, workshop_title } = regData;
-
-            // 3. Request Payment
-            await payments.requestPayment('카드', {
-                amount: amount,
-                orderId: order_id,
-                orderName: workshop_title || getLocalizedWorkshopTitle(workshop, language, t) || t.workshop.fallbackTitle(workshop.number || workshop.id),
-                successUrl: `${window.location.origin}/payment/success?registration_id=${registration_id}${selectedSession ? `&schedule=${encodeURIComponent(getScheduleSessionLabel(selectedSession, language))}` : ''}`,
-                failUrl: `${window.location.origin}/payment/fail?registration_id=${registration_id}`,
-            });
-        } catch (error: any) {
-            console.error("신청/결제 요청 에러:", error);
-            alert(`${t.workshop.requestError}: ${error.message || t.auth.genericError}`);
-        }
-    }, [
-        getWorkshopCapacity,
-        getWorkshopPaidCount,
-        goToCompleteProfile,
-        hasSelectableSchedule,
-        isProfileComplete,
-        isWorkshopClosedForPayment,
-        language,
-        selectedSession,
-        supabase,
-        t,
-        tossPayments,
-        user,
-    ]);
 
     const { containerStyle, rootGridStyle } = useGridLayout({
         activePreset,
@@ -451,10 +286,10 @@ function HomeContent() {
                         <div className="sidebar-nav-bottom">
                             {!user ? (
                                 <>
-                                    <button className="user-login-btn" onClick={() => { setIsLoginModalOpen(true); setIsSidebarExpanded(false); }}>
+                                    <button className="user-login-btn" onClick={() => { setLoginModalMode("login"); setIsLoginModalOpen(true); setIsSidebarExpanded(false); }}>
                                         {t.auth.login}
                                     </button>
-                                    <button className="user-signup-btn" onClick={() => { setIsLoginModalOpen(true); setIsSidebarExpanded(false); }}>
+                                    <button className="user-signup-btn" onClick={() => { setLoginModalMode("signup"); setIsLoginModalOpen(true); setIsSidebarExpanded(false); }}>
                                         {t.auth.signup}
                                     </button>
                                 </>
@@ -480,31 +315,11 @@ function HomeContent() {
                         </div>
                     </nav>
                 ) : (
-                    <div className="contact-sidebar-content" onClick={(e) => e.stopPropagation()}>
-                        <form className="contact-form-classic" onSubmit={handleContactSubmit}>
-                            <div className="contact-sidebar-header">
-                                <h2 className="modal-title">{t.contact.title}</h2>
-                            </div>
-
-                            <div className="contact-main-scroll">
-                                <div className="form-classic-row">
-                                    <input type="email" placeholder={t.contact.email} className="form-input-classic" value={contactData.email} onChange={(e) => setContactData({ ...contactData, email: e.target.value })} required />
-                                </div>
-                                <div className="form-classic-row">
-                                    <input type="text" placeholder={t.contact.subject} className="form-input-classic" value={contactData.subject} onChange={(e) => setContactData({ ...contactData, subject: e.target.value })} />
-                                </div>
-                                <div className="form-classic-row flex-textarea">
-                                    <textarea placeholder={t.contact.message} className="form-textarea-classic" value={contactData.message} onChange={(e) => setContactData({ ...contactData, message: e.target.value })} required></textarea>
-                                </div>
-                            </div>
-
-                            <div className="form-submit-row">
-                                <button type="submit" className="form-submit-btn-classic" disabled={isSending}>
-                                    {isSending ? t.contact.sending : t.contact.send}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                    <ContactSidebar
+                        isOpen={isContactOpen}
+                        onClose={() => setIsContactOpen(false)}
+                        t={t}
+                    />
                 )}
             </div>
 
@@ -530,19 +345,12 @@ function HomeContent() {
                             {visited.workshop && (
                                 selectedWorkshop ? (
                                     <WorkshopDetailOverlay 
+                                        key={selectedWorkshop._id || selectedWorkshop.id}
                                         workshop={selectedWorkshop}
                                         t={t}
                                         language={language}
-                                        showSchedule={showSchedule}
-                                        setShowSchedule={setShowSchedule}
-                                        selectedSession={selectedSession}
-                                        setSelectedSession={setSelectedSession}
-                                        showRefundPolicy={showRefundPolicy}
-                                        setShowRefundPolicy={setShowRefundPolicy}
-                                        hasSelectableSchedule={hasSelectableSchedule}
-                                        getWorkshopSchedule={getWorkshopSchedule}
-                                        isWorkshopClosedForPayment={isWorkshopClosedForPayment}
-                                        handleWorkshopPayment={handleWorkshopPayment}
+                                        registrationCounts={registrationCounts}
+                                        onRequireLogin={() => setIsLoginModalOpen(true)}
                                     />
                                 ) : (
                                     <WorkshopGrid workshops={allWorkshops} registrationCounts={registrationCounts} onSelectWorkshop={handleSelectWorkshop} getTagColor={getTagColor} />
@@ -580,6 +388,7 @@ function HomeContent() {
                     <LoginModal 
                         isOpen={isLoginModalOpen} 
                         onClose={() => setIsLoginModalOpen(false)} 
+                        initialMode={loginModalMode}
                     />
                 </>
             )}

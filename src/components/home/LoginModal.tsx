@@ -1,20 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { useLanguage } from "@/lib/i18n";
 
 interface LoginModalProps {
     isOpen: boolean;
     onClose: () => void;
+    initialMode?: "login" | "signup";
 }
 
-export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
-
+export default function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModalProps) {
     const {
         user,
         profile,
@@ -25,34 +22,25 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         signInWithEmail,
         signUpWithEmail
     } = useAuth();
+    const { goToCompleteProfile } = useProfileNavigation();
     const { t } = useLanguage();
 
     const [loginEmail, setLoginEmail] = useState("");
     const [loginPassword, setLoginPassword] = useState("");
-    const [isSignUpMode, setIsSignUpMode] = useState(false);
+    const [isSignUpMode, setIsSignUpMode] = useState(initialMode === "signup");
     const [loginError, setLoginError] = useState<string | null>(null);
     const [isLoginSubmitting, setIsLoginSubmitting] = useState(false);
 
     useEffect(() => {
-        if (!isOpen) {
+        if (isOpen) {
+            setIsSignUpMode(initialMode === "signup");
+        } else {
             setLoginEmail("");
             setLoginPassword("");
-            setIsSignUpMode(false);
             setLoginError(null);
             setIsLoginSubmitting(false);
         }
-    }, [isOpen]);
-
-    const getCurrentNextPath = useCallback(() => {
-        const query = searchParams.toString();
-        return `${pathname}${query ? `?${query}` : ''}`;
-    }, [pathname, searchParams]);
-
-    const goToCompleteProfile = useCallback(() => {
-        const currentPath = getCurrentNextPath();
-        const nextPath = currentPath.startsWith('/complete-profile') ? '/' : currentPath;
-        router.push(`/complete-profile?next=${encodeURIComponent(nextPath)}`);
-    }, [getCurrentNextPath, router]);
+    }, [isOpen, initialMode]);
 
     const handleEmailAuthSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();

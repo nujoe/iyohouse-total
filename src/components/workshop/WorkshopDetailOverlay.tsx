@@ -1,5 +1,9 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { loadTossPayments } from "@tosspayments/payment-sdk";
 import WorkshopDetailPoster from "@/components/workshop/WorkshopDetailPoster";
 import {
     getLocalizedCurriculumItem,
@@ -15,33 +19,136 @@ interface WorkshopDetailOverlayProps {
     workshop: any;
     t: any;
     language: "ko" | "en";
-    showSchedule: boolean;
-    setShowSchedule: (val: boolean) => void;
-    selectedSession: any;
-    setSelectedSession: (val: any) => void;
-    showRefundPolicy: boolean;
-    setShowRefundPolicy: (val: boolean) => void;
-    hasSelectableSchedule: (workshop: any) => boolean;
-    getWorkshopSchedule: (workshop: any) => any[];
-    isWorkshopClosedForPayment: (workshop: any) => boolean;
-    handleWorkshopPayment: (workshop: any) => void;
+    registrationCounts: Record<string, number>;
+    onRequireLogin: () => void;
 }
 
 export default function WorkshopDetailOverlay({
     workshop,
     t,
     language,
-    showSchedule,
-    setShowSchedule,
-    selectedSession,
-    setSelectedSession,
-    showRefundPolicy,
-    setShowRefundPolicy,
-    hasSelectableSchedule,
-    getWorkshopSchedule,
-    isWorkshopClosedForPayment,
-    handleWorkshopPayment
+    registrationCounts,
+    onRequireLogin
 }: WorkshopDetailOverlayProps) {
+    const { user, isProfileComplete, supabase } = useAuth();
+    const { goToCompleteProfile } = useProfileNavigation();
+
+    const [showSchedule, setShowSchedule] = useState(false);
+    const [selectedSession, setSelectedSession] = useState<any | null>(null);
+    const [showRefundPolicy, setShowRefundPolicy] = useState(false);
+    const [tossPayments, setTossPayments] = useState<any>(null);
+
+    useEffect(() => {
+        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+        if (!clientKey) {
+            console.error('[TossPayments] NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.');
+            return;
+        }
+        loadTossPayments(clientKey).then(setTossPayments);
+    }, []);
+
+    const getWorkshopCapacity = useCallback((ws: any) =>
+        typeof ws?.capacity === 'number' ? ws.capacity : 8, []);
+
+    const getWorkshopPaidCount = useCallback((ws: any) => {
+        const dbId = ws?.supabase_workshop_id;
+        return dbId ? registrationCounts[dbId] || 0 : 0;
+    }, [registrationCounts]);
+
+    const getWorkshopSchedule = useCallback((ws: any) =>
+        Array.isArray(ws?.schedule)
+            ? ws.schedule.filter((session: any) => session?.date || session?.time)
+            : [], []);
+
+    const hasSelectableSchedule = useCallback((ws: any) => getWorkshopSchedule(ws).length > 0, [getWorkshopSchedule]);
+
+    const isWorkshopClosedForPayment = useCallback((ws: any) => {
+        const isLegacyClosed = !ws?.isSanity && Number(ws?.id) <= 11;
+        return Boolean(
+            ws?.isClosed ||
+            isLegacyClosed ||
+            getWorkshopPaidCount(ws) >= getWorkshopCapacity(ws)
+        );
+    }, [getWorkshopCapacity, getWorkshopPaidCount]);
+
+    const handleWorkshopPayment = useCallback(async (ws: any) => {
+        if (!user) {
+            onRequireLogin();
+            return;
+        }
+
+        if (!isProfileComplete) {
+            goToCompleteProfile();
+            return;
+        }
+
+        const dbWorkshopId = ws.supabase_workshop_id;
+        if (!dbWorkshopId) {
+            alert(t.workshop.missingDbId);
+            return;
+        }
+
+        if (isWorkshopClosedForPayment(ws)) {
+            alert(t.workshop.closedAlert);
+            return;
+        }
+
+        if (hasSelectableSchedule(ws) && !selectedSession) {
+            alert(t.workshop.scheduleRequired);
+            setShowSchedule(true);
+            return;
+        }
+
+        let payments = tossPayments;
+        if (!payments) {
+            const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+            if (!clientKey) {
+                alert(t.workshop.paymentMisconfigured);
+                return;
+            }
+            payments = await loadTossPayments(clientKey);
+            setTossPayments(payments);
+        }
+
+        if (!payments) {
+            alert(t.workshop.paymentPreparing);
+            return;
+        }
+
+        try {
+            const { data: regData, error: rpcError } = await supabase.rpc('create_pending_registration', {
+                p_workshop_id: dbWorkshopId,
+            });
+
+            if (rpcError) throw rpcError;
+
+            const { registration_id, order_id, amount, workshop_title } = regData;
+
+            await payments.requestPayment('카드', {
+                amount: amount,
+                orderId: order_id,
+                orderName: workshop_title || getLocalizedWorkshopTitle(ws, language, t) || t.workshop.fallbackTitle(ws.number || ws.id),
+                successUrl: `${window.location.origin}/payment/success?registration_id=${registration_id}${selectedSession ? `&schedule=${encodeURIComponent(getScheduleSessionLabel(selectedSession, language))}` : ''}`,
+                failUrl: `${window.location.origin}/payment/fail?registration_id=${registration_id}`,
+            });
+        } catch (error: any) {
+            console.error("신청/결제 요청 에러:", error);
+            alert(`${t.workshop.requestError}: ${error.message || t.auth.genericError}`);
+        }
+    }, [
+        user,
+        isProfileComplete,
+        t,
+        isWorkshopClosedForPayment,
+        hasSelectableSchedule,
+        selectedSession,
+        tossPayments,
+        onRequireLogin,
+        goToCompleteProfile,
+        supabase,
+        language
+    ]);
+
     return (
         <div className="workshop-detail-container">
             <div className="detail-layout">
