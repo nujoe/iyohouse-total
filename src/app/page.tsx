@@ -1,19 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef, CSSProperties, Suspense } from "react";
+import { useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import Image from "next/image";
-import { urlFor } from "@/sanity/image";
 import { useWorkshopData } from "@/hooks/useWorkshopData";
 import { useAuth } from "@/hooks/useAuth";
 import { useGridLayout } from "@/hooks/useGridLayout";
 import GridLines from "@/components/GridLines";
 import WorkshopGrid from "@/components/WorkshopGrid";
-import CalendarView from "@/components/CalendarView";
-import MemberView from "@/components/MemberView";
+import HomeCalendarCell from "@/components/home/HomeCalendarCell";
+import HomeHeader from "@/components/home/HomeHeader";
+import HomeMainCell from "@/components/home/HomeMainCell";
+import HomeMemberCell from "@/components/home/HomeMemberCell";
+import MobileMenu from "@/components/home/MobileMenu";
+import WorkshopDetailPoster from "@/components/workshop/WorkshopDetailPoster";
 
-import MemberVisualStack from "@/components/MemberVisualStack";
-import { getLegacyPosterMeta } from "@/lib/legacyPosters";
 import ChatbotWidget from "@/features/iyohouse-chatbot/components/ChatbotWidget";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -562,47 +562,15 @@ function HomeContent() {
                 )}
             </div>
 
-            <header className="header">
-                <div className="header-left" ref={logoRef} onClick={() => handlePresetChange('main')} style={{ cursor: 'pointer' }}>
-                    <div className="logo-main-text">iYOHOUSE</div>
-                </div>
-                <div className="btn-sep"></div>
-                <div className="header-right">
-                    <button
-                        className={`header-nav-item ${activePreset === 'member' ? 'active' : ''}`}
-                        onClick={() => handlePresetChange('member')}
-                    >
-                        {t.nav.member}
-                    </button>
-
-                    <div className="header-lang">
-                        <button
-                            type="button"
-                            className={language === "ko" ? "active" : ""}
-                            onClick={() => setLanguage("ko")}
-                            aria-pressed={language === "ko"}
-                        >
-                            KOR
-                        </button>
-                        <span aria-hidden="true">/</span>
-                        <button
-                            type="button"
-                            className={language === "en" ? "active" : ""}
-                            onClick={() => setLanguage("en")}
-                            aria-pressed={language === "en"}
-                        >
-                            ENG
-                        </button>
-                    </div>
-
-                    <button className="header-email" onClick={() => handlePresetChange('contact')}>
-                        goyangiyoram@gmail.com
-                    </button>
-                    <button className="header-theme-btn" onClick={handleThemeChange} title="Change Theme Color">
-                        <div className="theme-dot"></div>
-                    </button>
-                </div>
-            </header>
+            <HomeHeader
+                activePreset={activePreset}
+                language={language}
+                logoRef={logoRef}
+                t={t}
+                onLanguageChange={setLanguage}
+                onPresetChange={handlePresetChange}
+                onThemeChange={handleThemeChange}
+            />
 
             {/* Info overlay removed in favor of expandable header-right */}
 
@@ -617,45 +585,7 @@ function HomeContent() {
                                 selectedWorkshop ? (
                                     <div className="workshop-detail-container">
                                         <div className="detail-layout">
-                                            <div className="detail-left">
-                                                <div className="detail-poster-wrapper">
-                                                    {(() => {
-                                                        const isSanity = !!selectedWorkshop._id;
-                                                        const legacyPoster = !isSanity ? getLegacyPosterMeta(Number(selectedWorkshop.id)) : null;
-                                                        let posterWidth = legacyPoster?.width || 1080;
-                                                        let posterHeight = legacyPoster?.height || 1350;
-                                                        if (isSanity && selectedWorkshop.posterMeta) {
-                                                            posterWidth = selectedWorkshop.posterMeta.width;
-                                                            posterHeight = selectedWorkshop.posterMeta.height;
-                                                        }
-                                                        const aspectRatio = `${posterWidth} / ${posterHeight}`;
-
-                                                        const imgUrl = isSanity
-                                                            ? (selectedWorkshop.poster ? urlFor(selectedWorkshop.poster).width(1200).auto('format').url() : null)
-                                                            : legacyPoster?.src;
-
-                                                        return imgUrl ? (
-                                                            <div className="detail-poster-aspect-box" style={{ "--aspect-ratio": aspectRatio } as CSSProperties}>
-                                                                <Image
-                                                                    src={imgUrl}
-                                                                    className="detail-main-poster"
-                                                                    alt="Poster"
-                                                                    width={posterWidth}
-                                                                    height={posterHeight}
-                                                                    sizes="(max-width: 1000px) 100vw, 45vw"
-                                                                    loading="lazy"
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        height: '100%',
-                                                                        objectFit: 'contain',
-                                                                        objectPosition: 'center',
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        ) : null;
-                                                    })()}
-                                                </div>
-                                            </div>
+                                            <WorkshopDetailPoster workshop={selectedWorkshop} />
                                             <div className="detail-right">
                                                 <div className="detail-info-inner">
                                                     <div className="detail-info-header">
@@ -801,93 +731,29 @@ function HomeContent() {
                         </div>
                     </div>
 
-                    <div className={`cell cell-diary ${activePreset === 'diary' ? 'active' : ''}`}>
-                        <div className="cell-cover"></div>
-                        <div className="cell-content diary-wrapper">
-                            {visited.diary && <CalendarView currentMonth={currentMonth} onMonthChange={setCurrentMonth} calendarEvents={calendarEvents} />}
-                        </div>
-                    </div>
+                    <HomeCalendarCell
+                        activePreset={activePreset}
+                        calendarEvents={calendarEvents}
+                        currentMonth={currentMonth}
+                        isVisited={Boolean(visited.diary)}
+                        onMonthChange={setCurrentMonth}
+                    />
 
-                    <div className={`cell cell-main ${activePreset === 'main' ? 'active' : ''}`}>
-                        <div className="cell-cover"></div>
-                        <div className="cell-content main-content-layout">
-                            <div className="main-text-column">
-                                <div className="main-intro-text">
-                                    {t.mainIntro}
-                                </div>
-                                <div className="info-bottom-text-wrapper">
-                                    <div className="info-bottom-text">info</div>
-                                    <div className="business-info-overlay">
-                                        <strong>{t.footer.company}</strong><br />
-                                        {t.footer.address}<br />
-                                        {t.footer.businessLicense}<br />
-                                        {t.footer.mallOrderLicense}<br />
-                                        {t.footer.email}<br />
-                                        WEBSITE :  <a href="https://www.instagram.com/djwns1234/" target="_blank" rel="noopener noreferrer">@djwns1234</a>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="main-visual-column">
-                                <MemberVisualStack />
-                            </div>
-                        </div>
-                    </div>
+                    <HomeMainCell activePreset={activePreset} t={t} />
 
-                    <div className={`cell cell-member ${activePreset === 'member' ? 'active' : ''}`}>
-                        <div className="cell-cover"></div>
-                        <div className="cell-content">
-                            {visited.member && <MemberView />}
-                        </div>
-                    </div>
+                    <HomeMemberCell activePreset={activePreset} isVisited={Boolean(visited.member)} />
 
                     <GridLines />
                 </div>
             </main>
 
 
-            {/* Mobile Menu Overlay */}
-            <div className={`mobile-menu-overlay ${isMenuOpen ? 'active' : ''}`}>
-                <div className="mobile-menu-inner">
-                    <div className="mobile-menu-header">
-                        <div className="logo-text">
-                            <span className="logo-title">IYOHOUSE</span>
-                        </div>
-                        <button className="menu-close-btn" onClick={() => setIsMenuOpen(false)}>
-                            <div className="close-icon"></div>
-                        </button>
-                    </div>
-
-                    <div className="mobile-menu-content-frame">
-                        <div className="mobile-menu-list">
-                            <button className="mobile-menu-item" onClick={() => { handlePresetChange('main'); setIsMenuOpen(false); }}>
-                                <span className="item-label">{t.nav.main}</span>
-                            </button>
-                            <button className="mobile-menu-item" onClick={() => { handlePresetChange('member'); setIsMenuOpen(false); }}>
-                                <span className="item-label">{t.nav.member}</span>
-                            </button>
-                            <button className="mobile-menu-item" onClick={() => { handlePresetChange('workshop'); setIsMenuOpen(false); }}>
-                                <span className="item-label">{t.nav.workshop}</span>
-                            </button>
-                            <button className="mobile-menu-item" onClick={() => { handlePresetChange('diary'); setIsMenuOpen(false); }}>
-                                <span className="item-label">{t.nav.calendar}</span>
-                            </button>
-                            <button className="mobile-menu-item" onClick={() => { handlePresetChange('contact'); setIsMenuOpen(false); }}>
-                                <span className="item-label">{t.nav.contact}</span>
-                            </button>
-                        </div>
-                        <div className="mobile-menu-footer">
-                            <div className="footer-line">  <strong>{t.footer.company}</strong><br />
-                                {t.footer.address}<br />
-                                {t.footer.businessLicense}<br />
-                                {t.footer.mallOrderLicense}<br />
-                                {t.footer.email}<br />
-                                {t.footer.websiteDesign} <a href="https://www.instagram.com/djwns1234/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold' }}>@djwns1234</a>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <MobileMenu
+                isOpen={isMenuOpen}
+                t={t}
+                onClose={() => setIsMenuOpen(false)}
+                onPresetChange={handlePresetChange}
+            />
 
             {isMounted && (
                 <>
