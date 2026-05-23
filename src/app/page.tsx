@@ -350,7 +350,7 @@ function HomeContent() {
                                         t={t}
                                         language={language}
                                         registrationCounts={registrationCounts}
-                                        onRequireLogin={() => setIsLoginModalOpen(true)}
+                                        onRequireLogin={() => { setLoginModalMode("login"); setIsLoginModalOpen(true); }}
                                     />
                                 ) : (
                                     <WorkshopGrid workshops={allWorkshops} registrationCounts={registrationCounts} onSelectWorkshop={handleSelectWorkshop} getTagColor={getTagColor} />
