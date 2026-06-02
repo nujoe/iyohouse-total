@@ -68,7 +68,7 @@
 @media (max-width: 900px) {
     .main-intro-title {
         font-size: 1.8rem;
-        padding: 20px 20px 0px 20px;
+
     }
 
     .main-intro-text {
@@ -77,7 +77,7 @@
         top: 0;
         transform: none;
         width: 100%;
-        padding: 10px 20px 40px 20px;
+
         font-size: 1rem;
         line-height: 1.6;
     }
@@ -177,8 +177,10 @@
         width: 100%;
     }
 
+
+
     .main-intro-text {
-        padding: 10px 20px 40px 20px;
+
         font-size: 1rem;
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState, type CSSProperties } from "react";
 
 interface CalendarViewProps {
     currentMonth: Date;
@@ -19,7 +19,7 @@ function CalendarView({
         setToday(new Date());
     }, []);
 
-    const calendarDays = useMemo(() => {
+    const calendar = useMemo(() => {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
 
@@ -30,8 +30,9 @@ function CalendarView({
         const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const prevMonthDays = new Date(year, month, 0).getDate();
+        const weekCount = Math.ceil((firstDay + daysInMonth) / 7);
 
-        return Array.from({ length: 42 }).map((_, i) => {
+        const days = Array.from({ length: weekCount * 7 }).map((_, i) => {
             const dayNum = i - firstDay + 1;
             const isCurrMonth = dayNum >= 1 && dayNum <= daysInMonth;
             const displayNum = isCurrMonth ? dayNum : (dayNum <= 0 ? prevMonthDays + dayNum : dayNum - daysInMonth);
@@ -48,6 +49,8 @@ function CalendarView({
                 key: i
             };
         });
+
+        return { days, weekCount };
     }, [currentMonth, calendarEvents, today]);
 
     const todayDayIndex = useMemo(() => {
@@ -79,8 +82,11 @@ function CalendarView({
                 ))}
             </div>
 
-            <div className="calendar-grid">
-                {calendarDays.map((day) => (
+            <div
+                className="calendar-grid"
+                style={{ "--calendar-week-count": calendar.weekCount } as CSSProperties}
+            >
+                {calendar.days.map((day) => (
                     <div key={day.key} className={`calendar-cell ${day.isCurrMonth ? 'in-month' : 'out-month'} ${day.isToday ? 'is-today' : ''}`}>
                         <div className={`date-marker ${day.dayEvents.length > 0 ? 'has-events' : ''}`}>
                             {day.displayNum}

@@ -395,7 +395,7 @@
 @media (max-width: 768px) {
     :root {
         --line-gap: 8px;
-        --panel-width: 14%;
+        --panel-width: 14vw;
         /* 모바일에서 사이드바 크기 확대 */
     }
 
@@ -428,34 +428,26 @@
 
     /* 모바일 헤더 정돈 */
     .header-right {
+        --mobile-auth-width: 65px;
+
+        position: relative !important;
         left: auto !important;
         width: auto !important;
         /* 7px 너비 고정 해제 */
         display: flex !important;
         align-items: center;
         padding-right: 0;
-        padding-left: 15px !important;
-        /* 구분선과의 안정적인 여백 */
-        justify-content: space-between !important;
+        padding-left: 0 !important;
+        justify-content: flex-end !important;
     }
 
-    .header-right>*:not(.header-lang):not(.header-auth-btn):not(.header-nav-item) {
+    .header-right>*:not(.header-lang):not(.header-auth-btn) {
         display: none !important;
-        /* KOR/ENG, LOGIN, MEMBER 외 모든 요소 숨김 */
+        /* KOR/ENG, LOGIN 외 모든 요소 숨김 */
     }
 
     .header-nav-item {
-        display: flex !important;
-        align-items: center;
-        font-size: 1.1rem !important;
-        font-family: 'courier', serif !important;
-        font-weight: 900 !important;
-        letter-spacing: -0.05em !important;
-        color: #888 !important;
-    }
-
-    .header-nav-item.active {
-        color: #000 !important;
+        display: none !important;
     }
 
     .header-toggle-btn {
@@ -467,23 +459,28 @@
     .logo-main-text {
         font-size: 1.3rem !important;
         font-family: 'courier', serif !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
     }
 
     .header-lang {
         display: flex !important;
         align-items: center;
-        font-size: 1.1rem !important;
+        position: absolute !important;
+        left: calc((100% - var(--mobile-auth-width)) / 2);
+        transform: translateX(-50%);
+        font-size: 1.3rem !important;
         font-family: 'courier', serif !important;
         font-weight: 900 !important;
         letter-spacing: -0.05em !important;
         text-transform: uppercase !important;
         line-height: 0.8 !important;
         color: #000 !important;
-        margin-right: 2px;
+        margin: 0 !important;
     }
 
     .header-lang button {
-        font-size: 1.1rem !important;
+        font-size: 1.3rem !important;
         font-family: 'courier', serif !important;
         font-weight: 900 !important;
         letter-spacing: -0.05em !important;
@@ -498,7 +495,7 @@
     }
 
     .header-lang span {
-        font-size: 1.1rem !important;
+        font-size: 1.3rem !important;
         font-family: 'courier', serif !important;
         font-weight: 900 !important;
         letter-spacing: -0.05em !important;
@@ -510,12 +507,14 @@
 
     /* 우측 로그인 버튼 축소 */
     .header-auth-btn {
+        width: var(--mobile-auth-width) !important;
+        max-width: var(--mobile-auth-width) !important;
+        margin-left: auto !important;
         font-size: 0.95rem !important;
         font-weight: 700 !important;
         padding: 0 12px !important;
         height: 100% !important;
         box-sizing: border-box;
-        max-width: 95px !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
@@ -549,6 +548,9 @@
 
     /* 모바일 전용 가로 구분선 (더블 라인 + 마름모 교차 마커) */
     .mobile-main-divider {
+        --mobile-divider-line-x-1: calc(100% - (var(--unit) * 2));
+        --mobile-divider-line-x-3: calc(100% - var(--unit));
+
         display: block;
         position: relative;
         width: 100% !important;
@@ -569,17 +571,17 @@
         height: var(--line-gap, 8px);
         background: var(--intersect);
         border: var(--line-thickness, 1px) solid var(--line, #000);
-        z-index: 11;
+        z-index: 11001;
         box-sizing: border-box;
-        top: 0;
+        top: calc(-1 * var(--line-thickness, 1px));
     }
 
     .mobile-main-divider::before {
-        left: var(--line-x-1) !important;
+        left: var(--mobile-divider-line-x-1) !important;
     }
 
     .mobile-main-divider::after {
-        left: var(--line-x-3) !important;
+        left: var(--mobile-divider-line-x-3) !important;
     }
 
     /* 메인 뷰 스크롤 해제 및 단일 스크롤 활성화 */

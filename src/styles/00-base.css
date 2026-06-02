@@ -15,11 +15,12 @@
     --top-row-1: 5.2rem;
     --top-row-2: calc(var(--top-row-1) + var(--unit));
 
-    --line-x-1: calc(100% - (var(--unit) * 2));
-    --line-x-3: calc(100% - var(--unit));
+    --panel-width: 6vw;
+    --stage-width: calc(100vw - var(--panel-width) + 1px);
+    --line-x-1: calc(var(--stage-width) - (var(--unit) * 2));
+    --line-x-3: calc(var(--stage-width) - var(--unit));
 
     --transition: 700ms cubic-bezier(0.22, 1, 0.36, 1);
-    --panel-width: 6%;
 }
 
 ::selection {
