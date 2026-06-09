@@ -11,8 +11,6 @@ interface LoginModalProps {
     initialMode?: "login" | "signup";
 }
 
-type SocialProvider = "kakao" | "google";
-
 export default function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModalProps) {
     const {
         user,
@@ -20,7 +18,6 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
         isProfileComplete,
         signOut,
         signInWithGoogle,
-        signInWithKakao,
         signInWithEmail,
         signUpWithEmail
     } = useAuth();
@@ -32,7 +29,7 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
     const [isSignUpMode, setIsSignUpMode] = useState(initialMode === "signup");
     const [loginError, setLoginError] = useState<string | null>(null);
     const [isLoginSubmitting, setIsLoginSubmitting] = useState(false);
-    const [socialLoginProvider, setSocialLoginProvider] = useState<SocialProvider | null>(null);
+    const [isGoogleLoginSubmitting, setIsGoogleLoginSubmitting] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -42,22 +39,21 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
             setLoginPassword("");
             setLoginError(null);
             setIsLoginSubmitting(false);
-            setSocialLoginProvider(null);
+            setIsGoogleLoginSubmitting(false);
         }
     }, [isOpen, initialMode]);
 
-    const handleSocialLogin = useCallback(async (provider: SocialProvider) => {
+    const handleGoogleLogin = useCallback(async () => {
         setLoginError(null);
-        setSocialLoginProvider(provider);
+        setIsGoogleLoginSubmitting(true);
 
-        const signIn = provider === "kakao" ? signInWithKakao : signInWithGoogle;
-        const { error } = await signIn();
+        const { error } = await signInWithGoogle();
 
         if (error) {
             setLoginError(error.message || t.auth.genericError);
-            setSocialLoginProvider(null);
+            setIsGoogleLoginSubmitting(false);
         }
-    }, [signInWithGoogle, signInWithKakao, t.auth.genericError]);
+    }, [signInWithGoogle, t.auth.genericError]);
 
     const handleEmailAuthSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
@@ -169,21 +165,12 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
                             <div className="social-login-group">
                                 <button
                                     type="button"
-                                    className="social-btn kakao"
-                                    onClick={() => handleSocialLogin("kakao")}
-                                    disabled={Boolean(socialLoginProvider)}
-                                >
-                                    <span className="btn-icon">K</span>
-                                    <span className="btn-text">{socialLoginProvider === "kakao" ? t.auth.submitting : t.auth.kakao}</span>
-                                </button>
-                                <button
-                                    type="button"
                                     className="social-btn google"
-                                    onClick={() => handleSocialLogin("google")}
-                                    disabled={Boolean(socialLoginProvider)}
+                                    onClick={handleGoogleLogin}
+                                    disabled={isGoogleLoginSubmitting}
                                 >
                                     <span className="btn-icon">G</span>
-                                    <span className="btn-text">{socialLoginProvider === "google" ? t.auth.submitting : t.auth.google}</span>
+                                    <span className="btn-text">{isGoogleLoginSubmitting ? t.auth.submitting : t.auth.google}</span>
                                 </button>
                             </div>
 
