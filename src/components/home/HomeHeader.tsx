@@ -64,7 +64,6 @@ export default function HomeHeader({
                     >
                         KOR
                     </button>
-                    <span aria-hidden="true">/</span>
                     <button
                         type="button"
                         className={language === "en" ? "active" : ""}
