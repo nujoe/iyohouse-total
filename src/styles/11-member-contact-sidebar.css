@@ -490,6 +490,8 @@
         line-height: 0.8 !important;
         color: #888 !important;
         transition: color 0.2s;
+        background: transparent !important;
+        padding: 0 !important;
     }
 
     .header-lang button.active {
