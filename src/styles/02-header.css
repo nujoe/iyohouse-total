@@ -166,7 +166,7 @@
 }
 
 .header-auth-btn:hover {
-    background: #000;
+    background: rgba(0, 0, 0, 0.675);
     color: var(--intersect);
 }
 
@@ -217,12 +217,12 @@
 
 .left-panel .sidebar-nav button:hover {
     color: var(--intersect);
-    background: rgba(0, 0, 0, 0.516);
+    background: rgba(0, 0, 0, 0.675);
 }
 
 .left-panel .sidebar-nav button.active {
     color: var(--intersect);
-    background: rgba(0, 0, 0, 0.516);
+    background: rgba(0, 0, 0, 0.864);
 }
 
 /* Redundant style removed to fix spacing */
