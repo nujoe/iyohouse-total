@@ -117,7 +117,6 @@
     align-items: center;
     background: linear-gradient(to right, var(--intersect), transparent);
     border: none;
-    border-left: 1px solid var(--line);
     padding: 0 20px;
     font-family: 'courier', serif;
     font-size: 1.6rem;
@@ -265,7 +264,7 @@
     align-items: center;
     z-index: 12000;
     padding: 0;
-    background: transparent;
+    background: linear-gradient(to bottom, var(--intersect), transparent);
     overflow: visible;
     transition: transform var(--transition), opacity var(--transition), height var(--transition), min-height var(--transition);
     box-sizing: border-box;
