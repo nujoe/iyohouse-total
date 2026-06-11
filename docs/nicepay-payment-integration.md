@@ -37,6 +37,7 @@ IYO_NICEPAY_VBANK_VALID_HOURS=72
 8. 서버가 NICEPAY 승인 API `/v1/payments/{tid}`를 호출합니다.
 9. 승인 응답의 `orderId`, `amount`, 선택적 결과 서명을 다시 검증합니다.
 10. 검증이 끝나면 `confirm_payment_registration` RPC로 `confirmed` 신청과 `payments` row를 만듭니다.
+11. NICEPAY 승인 후 DB 확정이 실패하면 `/v1/payments/{tid}/cancel`로 보상 취소를 시도합니다.
 
 ## 라우트 계약
 
@@ -55,7 +56,14 @@ IYO_NICEPAY_VBANK_VALID_HOURS=72
   - NICEPAY 사후 웹훅용입니다.
   - `tid + amount + ediDate + secretKey` 서명을 검증합니다.
   - `paid`는 같은 Supabase 확정 RPC로 처리합니다.
-  - `cancelled`, `partialCancelled`, `expired`, `failed`는 신청 상태를 `cancelled`로 전환합니다.
+  - `cancelled`는 활성 신청을 `cancelled`로 전환합니다.
+  - `expired`, `failed`는 아직 pending인 신청만 `cancelled`로 전환합니다.
+  - NICEPAY 요구사항에 맞춰 성공 처리 시 `text/html` 본문 `"OK"`로 응답합니다.
+
+- `/payment/fail`
+  - 실패 안내 화면입니다.
+  - URL 방문만으로 신청 상태를 바꾸지 않습니다.
+  - 검증된 서버 승인/웹훅/만료 처리만 신청 상태를 변경해야 합니다.
 
 ## Supabase 계약
 

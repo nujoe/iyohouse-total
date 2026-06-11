@@ -53,7 +53,9 @@ for (const relativePath of [
   ".env.example",
   "src/components/workshop/WorkshopDetailOverlay.tsx",
   "src/app/api/payment/confirm/route.ts",
+  "src/app/api/payment/webhook/route.ts",
   "src/app/payment/success/page.tsx",
+  "src/app/payment/fail/page.tsx",
 ]) {
   requireExcludes(relativePath, tossedNeedles);
 }
@@ -63,6 +65,7 @@ requireIncludes("src/lib/payment/nicepay.ts", [
   "getNicepayConfig",
   "createNicepayPaymentPayload",
   "approveNicepayPaymentAuth",
+  "cancelNicepayPayment",
   "verifyNicepayAuthSignature",
   "verifyNicepayResultSignature",
   "safeNicepayPayload",
@@ -87,6 +90,8 @@ requireIncludes("src/app/api/payment/confirm/route.ts", [
   "confirm_payment_registration",
   "p_payment_key",
   "authResultCode",
+  "cancelNicepayPayment",
+  "compensation",
   "registration_id",
 ]);
 
@@ -96,6 +101,18 @@ requireIncludes("src/app/api/payment/webhook/route.ts", [
   "workshop_registrations_v2",
   "cancelled",
   "payment_failed",
+  "text/html;charset=utf-8",
+  "new NextResponse(\"OK\"",
+]);
+
+requireExcludes("src/app/api/payment/confirm/route.ts", [
+  "await markRegistrationCancelled(registration.id",
+]);
+
+requireExcludes("src/app/payment/fail/page.tsx", [
+  "/api/payment/fail",
+  "useEffect",
+  "useRef",
 ]);
 
 requireIncludes("src/components/workshop/WorkshopDetailOverlay.tsx", [

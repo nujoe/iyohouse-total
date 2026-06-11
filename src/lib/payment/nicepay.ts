@@ -63,6 +63,26 @@ type NicepayApprovalResult =
       status?: number;
     };
 
+type NicepayCancelInput = {
+  tid: string;
+  orderId: string;
+  reason: string;
+  cancelAmt?: number;
+};
+
+type NicepayCancelResult =
+  | {
+      ok: true;
+      cancelledTid: string;
+      payload: Record<string, unknown>;
+    }
+  | {
+      ok: false;
+      message: string;
+      payload?: Record<string, unknown>;
+      status?: number;
+    };
+
 const supportedMethods = new Set<NicepayPaymentMethod>([
   "card",
   "vbank",
@@ -397,6 +417,67 @@ export async function approveNicepayPaymentAuth({
     tid: resultTid,
     providerStatus: String(result.status || "paid"),
     receiptUrl: String(result.receiptUrl || ""),
+    payload: result,
+  };
+}
+
+export async function cancelNicepayPayment({
+  tid,
+  orderId,
+  reason,
+  cancelAmt,
+}: NicepayCancelInput): Promise<NicepayCancelResult> {
+  const config = getNicepayConfig();
+
+  if (!isNicepayConfigured(config)) {
+    return { ok: false, message: "NICEPAY 환경 변수가 설정되어 있지 않습니다.", status: 500 };
+  }
+
+  if (!tid || !orderId) {
+    return { ok: false, message: "NICEPAY 취소에 필요한 거래 정보가 부족합니다.", status: 400 };
+  }
+
+  const body: Record<string, string | number> = {
+    reason: Array.from(reason.trim() || "IYOHOUSE registration compensation").slice(0, 100).join(""),
+    orderId,
+  };
+
+  if (typeof cancelAmt === "number" && Number.isFinite(cancelAmt) && cancelAmt > 0) {
+    body.cancelAmt = cancelAmt;
+  }
+
+  const response = await fetch(`${config.apiBaseUrl}/v1/payments/${encodeURIComponent(tid)}/cancel`, {
+    method: "POST",
+    headers: {
+      Authorization: nicepayBasicAuthorization(config.clientKey, config.secretKey),
+      "Content-Type": "application/json;charset=utf-8",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const result = await response.json().catch(() => null) as Record<string, unknown> | null;
+
+  if (!response.ok || !result) {
+    return {
+      ok: false,
+      message: `NICEPAY 취소 API 호출에 실패했습니다. (${response.status})`,
+      payload: result ? safeNicepayPayload(result) : undefined,
+      status: response.status || 502,
+    };
+  }
+
+  if (String(result.resultCode || "") !== "0000") {
+    return {
+      ok: false,
+      message: `NICEPAY 취소 실패: ${String(result.resultMsg || result.resultCode || "UNKNOWN")}`,
+      payload: safeNicepayPayload(result),
+      status: 400,
+    };
+  }
+
+  return {
+    ok: true,
+    cancelledTid: String(result.tid || result.cancelledTid || ""),
     payload: result,
   };
 }

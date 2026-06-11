@@ -36,6 +36,25 @@ async function cancelPendingRegistration(registrationId: string) {
     .eq("status", "pending");
 }
 
+async function cancelActiveRegistration(registrationId: string) {
+  const supabase = getSupabaseServerClient();
+
+  await supabase
+    .from("workshop_registrations_v2")
+    .update({ status: "cancelled" })
+    .eq("id", registrationId)
+    .in("status", ["pending", "confirmed"]);
+}
+
+function nicepayOkResponse() {
+  return new NextResponse("OK", {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html;charset=utf-8",
+    },
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
@@ -98,37 +117,38 @@ export async function POST(request: Request) {
         );
       }
 
-      return NextResponse.json({ success: true, message: "OK" });
+      return nicepayOkResponse();
     }
 
-    if (["cancelled", "partialCancelled", "expired"].includes(status)) {
+    if (status === "cancelled") {
+      await cancelActiveRegistration(registration.id);
+
+      return nicepayOkResponse();
+    }
+
+    if (["expired", "failed"].includes(status) || resultCode !== "0000") {
       await cancelPendingRegistration(registration.id);
 
-      return NextResponse.json({
-        success: true,
-        message: "OK",
+      return nicepayOkResponse();
+    }
+
+    if (status === "partialCancelled") {
+      console.warn("NICEPAY partial cancel webhook received:", {
+        registrationId: registration.id,
         providerStatus: status,
         payload: safeNicepayPayload(payload),
       });
+
+      return nicepayOkResponse();
     }
 
-    if (status === "failed" || resultCode !== "0000") {
-      await cancelPendingRegistration(registration.id);
-
-      return NextResponse.json({
-        success: true,
-        message: "OK",
-        providerStatus: failedProviderStatus,
-        payload: safeNicepayPayload(payload),
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "ignored",
-      providerStatus: status || "webhook_received",
+    console.warn("NICEPAY webhook ignored:", {
+      registrationId: registration.id,
+      providerStatus: status || failedProviderStatus || "webhook_received",
       payload: safeNicepayPayload(payload),
     });
+
+    return nicepayOkResponse();
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("NICEPAY webhook API error:", error);

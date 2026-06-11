@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/admin";
 import {
   approveNicepayPaymentAuth,
+  cancelNicepayPayment,
   safeNicepayPayload,
 } from "@/lib/payment/nicepay";
 
@@ -49,7 +50,7 @@ function redirectUrl(request: Request, pathname: string, params: Record<string, 
   return url;
 }
 
-async function markRegistrationCancelled(registrationId: string, reason: string) {
+async function markPendingRegistrationCancelled(registrationId: string, reason: string) {
   const supabase = getSupabaseServerClient();
 
   await supabase
@@ -88,11 +89,8 @@ export async function POST(request: Request) {
     }
 
     if (auth.authResultCode !== "0000") {
-      await markRegistrationCancelled(registration.id, auth.authResultMsg || auth.authResultCode || "auth_failed");
-
       return NextResponse.redirect(
         redirectUrl(request, "/payment/fail", {
-          registration_id: registration.id,
           order_id: registration.order_id,
           message: auth.authResultMsg || "NICEPAY 인증이 실패했습니다.",
         }),
@@ -151,11 +149,26 @@ export async function POST(request: Request) {
     if (rpcError) {
       console.error("confirm_payment_registration RPC failed:", rpcError);
 
+      const compensation = await cancelNicepayPayment({
+        tid: approval.tid,
+        orderId: registration.order_id,
+        cancelAmt: Number(registration.amount),
+        reason: "IYOHOUSE registration confirmation failed",
+      });
+
+      if (compensation.ok) {
+        await markPendingRegistrationCancelled(registration.id, "confirmation_failed_compensated");
+      } else {
+        console.error("NICEPAY compensation cancel failed:", compensation.message, compensation.payload);
+      }
+
       return NextResponse.redirect(
         redirectUrl(request, "/payment/fail", {
           registration_id: registration.id,
           order_id: registration.order_id,
-          message: "결제는 승인되었으나 신청 확정 중 오류가 발생했습니다.",
+          message: compensation.ok
+            ? "신청 확정 중 오류가 발생해 결제를 취소했습니다."
+            : "결제는 승인되었으나 신청 확정 중 오류가 발생했습니다. 운영자에게 문의해 주세요.",
         }),
         { status: 303 },
       );
