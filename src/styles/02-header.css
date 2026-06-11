@@ -115,7 +115,6 @@
     align-items: center;
     background: linear-gradient(to right, var(--intersect), transparent);
     border: none;
-    border-left: 1px solid var(--line);
     padding: 0 20px;
     font-family: 'courier', serif;
     font-size: 1.6rem;
