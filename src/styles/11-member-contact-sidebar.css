@@ -342,8 +342,9 @@
     border-top: var(--line-thickness) solid #000;
     color: #000;
     padding: 20px;
+    font-family: var(--font-gowun-batang), 'Gowun Batang', serif;
     font-size: 1.3rem;
-    font-weight: 900;
+    font-weight: 700;
     cursor: pointer;
     transition: background 0.2s;
 }

@@ -11,6 +11,45 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'DB 동기화 중 오류가 발생했습니다.'
 }
 
+function getSyncErrorMessage(status: number, result?: any) {
+  if (status === 401) {
+    return '사이트에 관리자 계정으로 로그인한 뒤 다시 시도해 주세요.'
+  }
+
+  if (status === 403) {
+    const authEmail = result?.authUser?.email
+    const authUserId = result?.authUser?.id
+    const profileId = result?.profile?.id
+    const isSuperAdmin = result?.profile?.is_super_admin
+    const profileError = result?.profileError
+    const details = [
+      authEmail ? `로그인 이메일: ${authEmail}` : '',
+      authUserId ? `로그인 유저 ID: ${authUserId}` : '',
+      profileId ? `프로필 ID: ${profileId}` : '프로필 ID: 없음',
+      `is_super_admin: ${String(isSuperAdmin)}`,
+      profileError ? `프로필 조회 오류: ${profileError}` : '',
+    ].filter(Boolean).join('\n')
+
+    return [
+      '이 계정에는 DB 동기화 권한이 없습니다. Supabase profiles.is_super_admin 값을 확인해 주세요.',
+      details,
+    ].filter(Boolean).join('\n\n')
+  }
+
+  return result?.error || 'DB 동기화에 실패했습니다.'
+}
+
+async function syncWorkshop(documentId: string) {
+  const response = await fetch('/api/admin/sync-workshops', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ documentId }),
+  })
+  const result = await response.json().catch(() => null)
+
+  return { response, result }
+}
+
 export const SyncWorkshopDbAction: DocumentActionComponent = (props) => {
   const [isSyncing, setIsSyncing] = useState(false)
   const sourceDocument = props.draft || props.published
@@ -51,15 +90,10 @@ export const SyncWorkshopDbAction: DocumentActionComponent = (props) => {
       setIsSyncing(true)
 
       try {
-        const response = await fetch('/api/admin/sync-workshops', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ documentId: props.id }),
-        })
-        const result = await response.json().catch(() => null)
+        const { response, result } = await syncWorkshop(props.id)
 
         if (!response.ok || !result?.success) {
-          throw new Error(result?.error || 'DB 동기화에 실패했습니다.')
+          throw new Error(getSyncErrorMessage(response.status, result))
         }
 
         const syncedId = result.results?.syncedIds?.[0]

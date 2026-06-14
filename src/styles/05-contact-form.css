@@ -134,8 +134,9 @@
     background: #000;
     color: #fff;
     padding: 18px;
+    font-family: var(--font-gowun-batang), 'Gowun Batang', serif;
     font-size: 1.1rem;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
     border: none;
     transition: opacity 0.2s;

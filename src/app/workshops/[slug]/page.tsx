@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
+import MixedWorkshopTitle from "@/components/workshop/MixedWorkshopTitle";
 import {
   buildWorkshopJsonLd,
   getPrimaryScheduleLabel,
@@ -166,7 +167,7 @@ export default async function WorkshopPage({ params }: WorkshopPageProps) {
                   ))}
                 </div>
                 <div className="detail-title-wrapper">
-                  <h1 className="detail-main-title">{title}</h1>
+                  <MixedWorkshopTitle as="h1" className="detail-main-title" title={title} />
                 </div>
               </header>
 

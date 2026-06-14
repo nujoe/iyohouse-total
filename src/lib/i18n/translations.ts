@@ -25,7 +25,7 @@ const ko = {
         contact: "CONTACT",
     },
     mainIntroTitle: "이요하우스",
-    mainIntro: "가느다란 실이 손가락 사이를 자유롭게 오가듯, ‘이요’는 우연한 교차에 주목합니다. 팽팽히 당기고 느슨히 푸는 실뜨기처럼, 생각은 서로의 손길을 타며 끊임없이 변형됩니다. 요람 속의 실들은 무엇이 될지 모른 채 잠시 엉키고 때로는 끊어지기도 합니다. 하지만 우리는 어긋남조차 새로운 연결이 된다는 사실을 기꺼이 받아들입니다. 창작자를 위한 공공공원은 이요하우스로 이어집니다.",
+    mainIntro: "이요하우스는 창작자를 위한 자유실험공간입니다. 2025년 ‘공공공원’이라는 이름으로 시작해, 워크숍과 동아리, 각종 이벤트가 열리는 공간으로 운영되고 있습니다.\n\n가느다란 실이 손가락 사이를 오가며 모양을 바꾸는 실뜨기처럼, 이요하우스는 우연한 만남에 주목합니다. 이곳에서 생각은 팽팽해지기도, 느슨해지기도 하고, 때로는 엉키거나 끊어지며 뜻밖의 형태로 이어집니다. 우리는 이러한 교차 속에서 새로운 가능성이 시작된다고 믿습니다.\n\n이요하우스를 찾아오는 모든 창작자를 환영합니다. 느슨하게 시작해도 좋습니다.",
     auth: {
         login: "로그인",
         signup: "회원가입",
@@ -67,6 +67,7 @@ const ko = {
         scheduleSelect: "일정 선택",
         closed: "마감",
         apply: "워크숍 신청",
+        alreadyApplied: "이미 신청한 워크숍입니다.",
         legacyTitle: (id: number | string) => `AI.zip ${id} 그래픽`,
         fallbackTitle: (id?: number | string | null) => `워크숍${id ? ` ${id}` : ""}`,
         tutorLabel: (name: string) => `튜터 : ${name}`,
@@ -157,7 +158,7 @@ const en: Translation = {
         contact: "CONTACT",
     },
     mainIntroTitle: "IYOHOUSE",
-    mainIntro: "Like a fine thread moving freely between fingers, IYO pays attention to accidental crossings. As in string figure play, where tension and release keep changing the shape, ideas transform through one another's hands. The threads in the cradle may tangle, loosen, or break before they know what they will become. We welcome even misalignment as the beginning of a new connection. A public park for creators continues as IYOHOUSE.",
+    mainIntro: "IYOHOUSE is a free experimental space for creators. Starting in 2025 under the name 'Public Park', it is run as a space hosting workshops, clubs, and various events.\n\nLike a cat's cradle where a thin thread moves between fingers to change its shape, IYOHOUSE pays attention to accidental encounters. Here, thoughts may tighten or loosen, and sometimes get tangled or broken, connecting in unexpected forms. We believe that new possibilities begin within these crossings.\n\nWe welcome all creators visiting IYOHOUSE. It is okay to start loosely.",
     auth: {
         login: "Login",
         signup: "Sign up",
@@ -199,6 +200,7 @@ const en: Translation = {
         scheduleSelect: "Select schedule",
         closed: "Closed",
         apply: "Apply",
+        alreadyApplied: "Already registered for this workshop.",
         legacyTitle: (id: number | string) => `AI.zip ${id} Graphic`,
         fallbackTitle: (id?: number | string | null) => `Workshop${id ? ` ${id}` : ""}`,
         tutorLabel: (name: string) => `Tutor : ${name}`,

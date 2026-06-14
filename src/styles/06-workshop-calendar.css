@@ -546,7 +546,7 @@ a.workshop-item {
 .title-box {
     padding: 2px 0;
     font-size: 1.5rem;
-    letter-spacing: -0.05em;
+    letter-spacing: 0;
 
     /* width: 100% 대신 아래 두 줄을 사용하세요 */
     flex: 1;
@@ -557,10 +557,10 @@ a.workshop-item {
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    font-weight: 900;
+    font-weight: 700;
     color: var(--line);
     margin-bottom: 2px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-gowun-batang), 'Gowun Batang', serif;
 }
 
 .color-dots {

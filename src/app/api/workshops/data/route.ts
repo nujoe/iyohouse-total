@@ -9,7 +9,7 @@ const sanityServerClient = createClient({
   projectId,
   dataset,
   apiVersion,
-  useCdn: true,
+  useCdn: false,
 })
 
 type WorkshopRuntimeData = {

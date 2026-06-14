@@ -21,6 +21,7 @@ type SanityWorkshop = {
   capacity?: number
   isClosed?: boolean
   supabase_workshop_id?: string
+  _syncTargetIds?: string[]
 }
 
 type SyncRequestBody = {
@@ -56,19 +57,47 @@ function getSyncDocumentIds(documentId: string) {
 
 function dedupeWorkshopsPreferDraft(workshops: SanityWorkshop[]) {
   const byPublishedId = new Map<string, SanityWorkshop>()
+  const idsByPublishedId = new Map<string, string[]>()
+  const supabaseIdByPublishedId = new Map<string, string>()
 
   for (const workshop of workshops) {
     const publishedId = getPublishedId(workshop._id)
     const existing = byPublishedId.get(publishedId)
     const isDraft = workshop._id.startsWith('drafts.')
     const existingIsDraft = existing?._id.startsWith('drafts.')
+    const targetIds = idsByPublishedId.get(publishedId) || []
+
+    if (!targetIds.includes(workshop._id)) {
+      targetIds.push(workshop._id)
+      idsByPublishedId.set(publishedId, targetIds)
+    }
+
+    if (workshop.supabase_workshop_id) {
+      supabaseIdByPublishedId.set(publishedId, workshop.supabase_workshop_id)
+    }
 
     if (!existing || (isDraft && !existingIsDraft)) {
       byPublishedId.set(publishedId, workshop)
     }
   }
 
-  return Array.from(byPublishedId.values())
+  return Array.from(byPublishedId.entries()).map(([publishedId, workshop]) => ({
+    ...workshop,
+    supabase_workshop_id: workshop.supabase_workshop_id || supabaseIdByPublishedId.get(publishedId),
+    _syncTargetIds: idsByPublishedId.get(publishedId) || [workshop._id],
+  }))
+}
+
+async function patchWorkshopDbId(documentIds: string[], supabaseWorkshopId: string) {
+  const transaction = sanityWriteClient.transaction()
+
+  for (const documentId of documentIds) {
+    transaction.patch(documentId, (patch) =>
+      patch.set({ supabase_workshop_id: supabaseWorkshopId }),
+    )
+  }
+
+  return transaction.commit()
 }
 
 async function parseSyncRequestBody(request: NextRequest): Promise<SyncRequestBody> {
@@ -110,9 +139,10 @@ async function verifyAdminAccess(request: NextRequest):
       }
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const supabaseAdmin = getSupabaseServerClient()
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('is_super_admin')
+      .select('id, email, is_super_admin')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -120,7 +150,22 @@ async function verifyAdminAccess(request: NextRequest):
       return {
         ok: false,
         response: NextResponse.json(
-          { success: false, error: 'Forbidden – super admin access is required.' },
+          {
+            success: false,
+            error: 'Forbidden – super admin access is required.',
+            authUser: {
+              id: user.id,
+              email: user.email ?? null,
+            },
+            profile: profile
+              ? {
+                  id: profile.id,
+                  email: profile.email,
+                  is_super_admin: profile.is_super_admin,
+                }
+              : null,
+            profileError: profileError?.message ?? null,
+          },
           { status: 403 },
         ),
       }
@@ -246,6 +291,14 @@ export async function POST(request: NextRequest) {
         }
 
         if (updatedWs) {
+          try {
+            const targetIds = ws._syncTargetIds?.length ? ws._syncTargetIds : [ws._id]
+            await patchWorkshopDbId(targetIds, updatedWs.id)
+            results.patchedSanityIds.push(...targetIds)
+          } catch (sanityError: any) {
+            results.errors.push(`Sanity patch error for ${title}: ${sanityError.message}`)
+          }
+
           results.updated++
           results.syncedIds.push(updatedWs.id)
           continue
@@ -275,14 +328,12 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        await sanityWriteClient
-          .patch(ws._id)
-          .set({ supabase_workshop_id: newWs.id })
-          .commit()
+        const targetIds = ws._syncTargetIds?.length ? ws._syncTargetIds : [ws._id]
+        await patchWorkshopDbId(targetIds, newWs.id)
 
         results.created++
         results.syncedIds.push(newWs.id)
-        results.patchedSanityIds.push(ws._id)
+        results.patchedSanityIds.push(...targetIds)
       } catch (sanityError: any) {
         results.errors.push(`Sanity patch error for ${title}: ${sanityError.message}`)
       }
