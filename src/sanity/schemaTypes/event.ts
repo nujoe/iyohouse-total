@@ -20,14 +20,6 @@ export const eventType = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: 'dates',
-      title: '추가 날짜 리스트',
-      type: 'array',
-      of: [{ type: 'date' }],
-      description: '동일한 내용의 일정이 열리는 추가 날짜들을 선택하세요.',
-      validation: (Rule) => Rule.unique(),
-    }),
-    defineField({
       name: 'time',
       title: '시간',
       type: 'string',
@@ -52,17 +44,12 @@ export const eventType = defineType({
     select: {
       title: 'title',
       date: 'date',
-      dates: 'dates',
       time: 'time',
     },
     prepare(selection) {
-      const { title, date, dates, time } = selection
-      let dateDisplay = date;
-      if (Array.isArray(dates) && dates.length > 0) {
-        dateDisplay = `${date} 외 ${dates.length}일`;
-      }
+      const { title, date, time } = selection
       return {
-        title: dateDisplay ? `[${dateDisplay}] ${title}` : title,
+        title: `[${date}] ${title}`,
         subtitle: time,
       }
     },

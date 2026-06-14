@@ -30,6 +30,12 @@ function getRedirectBase(request: Request, origin: string) {
   return origin
 }
 
+function hasCompletedProfile(
+  profile: { completed_at: string | null } | null
+) {
+  return Boolean(profile?.completed_at)
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -41,21 +47,19 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser()
+
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_profile_complete')
+          .select('completed_at')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
 
-        if (!profile?.is_profile_complete) {
-          const completeProfileUrl = new URL('/complete-profile', base)
-          if (next && next !== '/') {
-            completeProfileUrl.searchParams.set('next', next)
-          }
-          return NextResponse.redirect(completeProfileUrl.toString())
+        if (!hasCompletedProfile(profile)) {
+          return NextResponse.redirect(`${base}/complete-profile?next=${encodeURIComponent(next)}`)
         }
       }
+
       return NextResponse.redirect(`${base}${next}`)
     }
   }

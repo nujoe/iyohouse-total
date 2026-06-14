@@ -15,10 +15,8 @@ function assertValue<T>(v: T | undefined, errorMessage: string): T {
   if (v === undefined || v === '') {
     if (process.env.NODE_ENV === 'development') {
       console.warn(`[Sanity Configuration] ${errorMessage}. Using placeholder value.`)
-      return 'placeholder' as T
     }
-
-    throw new Error(errorMessage)
+    return 'placeholder' as T
   }
 
   return v

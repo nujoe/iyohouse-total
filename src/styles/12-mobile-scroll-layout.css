@@ -68,8 +68,8 @@
         left: calc((var(--line-gap) * 2) + var(--line-thickness)) !important;
         right: var(--line-gap) !important;
         width: auto !important;
-        overflow-y: auto !important;
-        touch-action: pan-y !important;
+        overflow: hidden !important;
+        touch-action: none !important;
     }
 
     .preset-diary .diary-wrapper {
@@ -96,11 +96,11 @@
 
     .preset-diary .diary-wrapper,
     .preset-diary .calendar-container {
-        height: auto !important;
-        min-height: 100% !important;
-        overflow: visible !important;
-        overscroll-behavior: auto !important;
-        touch-action: pan-y !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        overscroll-behavior: none !important;
+        touch-action: none !important;
     }
 
     .left-panel.contact-mode,
@@ -187,22 +187,16 @@
     }
 
     .calendar-nav .nav-btn {
-        font-size: 10px !important;
-        min-width: 24px !important;
-        height: 24px !important;
-        padding: 0 8px !important;
-    }
-
-    .calendar-nav .nav-btn:not(.today) {
-        padding: 0 !important;
+        font-size: 12px !important;
+        /* 모바일 전용 크기 조정 */
+        padding: 2px 4px !important;
+        /* 모바일 전용 버튼 내부 패딩 */
     }
 
     .calendar-grid-header,
     .calendar-grid {
-        width: min(100%, 310px) !important;
-        max-width: 310px !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
         min-width: 0 !important;
         box-sizing: border-box !important;
     }
@@ -216,17 +210,15 @@
     }
 
     .grid-header-cell:not(:last-child)::after {
-        width: 8px !important;
-        height: 8px !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        transform: translate(50%, 50%) rotate(45deg) !important;
+        width: var(--line-gap) !important;
+        height: var(--line-gap) !important;
+        right: calc(-1 * var(--line-gap) / 2) !important;
+        bottom: calc(-1 * var(--line-gap) / 2) !important;
         box-sizing: border-box !important;
     }
 
     .calendar-grid {
-        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
-        grid-template-rows: repeat(var(--calendar-week-count, 6), auto) !important;
+        grid-template-rows: repeat(var(--calendar-week-count, 6), minmax(0, 1fr)) !important;
         row-gap: 16px !important;
         min-height: 0 !important;
     }
@@ -234,11 +226,6 @@
     .calendar-cell {
         min-width: 0 !important;
         box-sizing: border-box !important;
-        height: auto !important;
-        padding-top: 26px !important;
-        min-height: 60px !important;
-        max-height: none !important;
-        overflow: visible !important;
     }
 
     .date-marker {
@@ -246,8 +233,6 @@
         right: 4px !important;
         width: 26px !important;
         min-width: 26px !important;
-        height: 18px !important;
-        border-radius: 999px !important;
         letter-spacing: 0.12em !important;
         font-variant-numeric: tabular-nums;
     }

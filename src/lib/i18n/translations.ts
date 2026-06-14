@@ -49,7 +49,6 @@ const ko = {
         emailRequired: "이메일과 비밀번호를 입력해 주세요.",
         passwordMin: "비밀번호는 최소 6자리 이상이어야 합니다.",
         signupDone: "회원가입이 완료되었습니다! 가입하신 정보로 로그인되었습니다.",
-        signupEmailSent: "인증 이메일이 발송되었습니다. 이메일의 링크를 클릭하여 가입을 완료해 주세요.",
         genericError: "오류가 발생했습니다.",
     },
     contact: {
@@ -140,7 +139,7 @@ const ko = {
         company: "주식회사 이요하우스",
         address: "ADDRESS : 서울시 마포구 희우정로 5길 29, 3층",
         businessLicense: "BUSINESS LICENSE : 718-88-02112",
-        mallOrderLicense: "통신판매업신고번호 : 제2026-서울마포-1416호",
+        mallOrderLicense: "MALL-ORDER LICENSE : 2024-서울송파-2708",
         email: "EMAIL : goyangiyoram@gmail.com",
         websiteDesign: "웹사이트 디자인 : 어 준",
     },
@@ -181,7 +180,6 @@ const en: Translation = {
         emailRequired: "Please enter your email and password.",
         passwordMin: "Password must be at least 6 characters.",
         signupDone: "Sign up is complete. You are now logged in.",
-        signupEmailSent: "A verification email has been sent. Please click the link in the email to complete registration.",
         genericError: "Something went wrong.",
     },
     contact: {
@@ -272,7 +270,7 @@ const en: Translation = {
         company: "IYOHOUSE Inc.",
         address: "ADDRESS : 3F, 29 Huiujeong-ro 5-gil, Mapo-gu, Seoul",
         businessLicense: "BUSINESS LICENSE : 718-88-02112",
-        mallOrderLicense: "MALL-ORDER LICENSE : 2026-Seoul Mapo-1416",
+        mallOrderLicense: "MALL-ORDER LICENSE : 2024-Seoul Songpa-2708",
         email: "EMAIL : goyangiyoram@gmail.com",
         websiteDesign: "Website design : Eo Jun",
     },

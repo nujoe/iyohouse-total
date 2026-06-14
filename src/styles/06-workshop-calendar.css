@@ -164,13 +164,13 @@
 .grid-header-cell:not(:last-child)::after {
     content: "";
     position: absolute;
-    bottom: 0;
-    right: 0;
+    bottom: -5.5px;
+    right: -5.5px;
     width: 10px;
     height: 10px;
     background: var(--intersect);
     border: 1px solid #000;
-    transform: translate(50%, 50%) rotate(45deg);
+    transform: rotate(45deg);
     z-index: 10;
 }
 
@@ -255,12 +255,12 @@
     align-items: center;
     gap: 6px;
     border-bottom: var(--line-thickness) solid #000;
-    width: calc(100% - 16px);
+    width: 100%;
     z-index: 5;
     position: relative;
     overflow: hidden;
     text-align: left;
-    margin: 0 8px;
+    margin: 0;
     cursor: pointer;
 }
 

@@ -4,7 +4,6 @@ import { visionTool } from '@sanity/vision'
 import { schema } from './schemaTypes'
 import { apiVersion, dataset, projectId } from './env'
 import { GenerateWorkshopEnglishAction } from './actions/generateWorkshopEnglishAction'
-import { SyncWorkshopDbAction } from './actions/syncWorkshopDbAction'
 
 export const config = defineConfig({
   basePath: '/studio',
@@ -15,7 +14,7 @@ export const config = defineConfig({
   document: {
     actions: (prev, context) =>
       context.schemaType === 'workshop'
-        ? [SyncWorkshopDbAction, GenerateWorkshopEnglishAction, ...prev]
+        ? [GenerateWorkshopEnglishAction, ...prev]
         : prev,
   },
   plugins: [
