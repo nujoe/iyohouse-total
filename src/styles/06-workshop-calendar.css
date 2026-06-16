@@ -164,13 +164,13 @@
 .grid-header-cell:not(:last-child)::after {
     content: "";
     position: absolute;
-    bottom: -5.5px;
-    right: -5.5px;
+    bottom: 0;
+    right: 0;
     width: 10px;
     height: 10px;
     background: var(--intersect);
     border: 1px solid #000;
-    transform: rotate(45deg);
+    transform: translate(50%, 50%) rotate(45deg);
     z-index: 10;
 }
 
@@ -255,12 +255,12 @@
     align-items: center;
     gap: 6px;
     border-bottom: var(--line-thickness) solid #000;
-    width: 100%;
+    width: calc(100% - 16px);
     z-index: 5;
     position: relative;
     overflow: hidden;
     text-align: left;
-    margin: 0;
+    margin: 0 8px;
     cursor: pointer;
 }
 
@@ -546,7 +546,7 @@ a.workshop-item {
 .title-box {
     padding: 2px 0;
     font-size: 1.5rem;
-    letter-spacing: -0.05em;
+    letter-spacing: 0;
 
     /* width: 100% 대신 아래 두 줄을 사용하세요 */
     flex: 1;
@@ -557,10 +557,10 @@ a.workshop-item {
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    font-weight: 900;
+    font-weight: 700;
     color: var(--line);
     margin-bottom: 2px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-gowun-batang), 'Gowun Batang', serif;
 }
 
 .color-dots {

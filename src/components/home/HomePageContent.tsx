@@ -14,7 +14,6 @@ import { useLogoMetrics } from "@/hooks/useLogoMetrics";
 import { useHomeNavigationState } from "@/hooks/useHomeNavigationState";
 import { useHomeModalState } from "@/hooks/useHomeModalState";
 import HomeHeader from "@/components/home/HomeHeader";
-import HomeInfoButton from "@/components/home/HomeInfoButton";
 import HomeSidebar from "@/components/home/HomeSidebar";
 import HomeStage from "@/components/home/HomeStage";
 import MobileMenu from "@/components/home/MobileMenu";
@@ -59,6 +58,8 @@ export default function HomePageContent() {
     } = useHomeModalState();
     const {
         activePreset,
+        gridTransitionPhase,
+        gridTransitionPreset,
         handlePresetChange,
         handleSelectWorkshop,
         isContactOpen,
@@ -79,16 +80,18 @@ export default function HomePageContent() {
     });
 
     const handleScroll = noopScrollHandler;
+    const gridLayoutPreset = gridTransitionPhase === "pull" ? gridTransitionPreset : "main";
 
     const { containerStyle, rootGridStyle } = useGridLayout({
         activePreset,
+        gridPreset: gridLayoutPreset,
         logoWidth,
         logoHeight,
         dynamicColor,
     });
 
     return (
-        <div ref={containerRef} style={containerStyle} className={`app-container preset-${activePreset} ${isContactOpen ? 'contact-open' : ''} ${isBooting ? 'is-booting' : ''} ${isHeaderHovered ? 'header-hovered' : ''}`}>
+        <div ref={containerRef} style={containerStyle} className={`app-container preset-${activePreset} grid-preset-${gridTransitionPreset} grid-phase-${gridTransitionPhase} ${isBooting ? 'is-booting' : ''} ${isHeaderHovered ? 'header-hovered' : ''}`}>
             <style>{rootGridStyle}</style>
 
             <div 
@@ -149,8 +152,6 @@ export default function HomePageContent() {
                 t={t}
                 visited={visited}
             />
-
-            <HomeInfoButton className="mobile-fixed-info" t={t} />
 
             <MobileMenu
                 isOpen={isMenuOpen}

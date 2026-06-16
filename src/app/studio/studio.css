@@ -1,0 +1,43 @@
+.studio-scrollbar-scope {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: auto;
+  background: #fff;
+  overscroll-behavior: auto;
+}
+
+body:has(.studio-scrollbar-scope) {
+  overflow: auto;
+  overscroll-behavior: auto;
+}
+
+.studio-scrollbar-scope,
+.studio-scrollbar-scope * {
+  scrollbar-width: auto;
+  -ms-overflow-style: auto;
+}
+
+.studio-scrollbar-scope::-webkit-scrollbar,
+.studio-scrollbar-scope *::-webkit-scrollbar {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.studio-scrollbar-scope::-webkit-scrollbar-track,
+.studio-scrollbar-scope *::-webkit-scrollbar-track {
+  background: #f4f4f4;
+}
+
+.studio-scrollbar-scope::-webkit-scrollbar-thumb,
+.studio-scrollbar-scope *::-webkit-scrollbar-thumb {
+  background: #9b9b9b;
+  border: 2px solid #f4f4f4;
+  border-radius: 999px;
+}
+
+.studio-scrollbar-scope::-webkit-scrollbar-thumb:hover,
+.studio-scrollbar-scope *::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}

@@ -36,10 +36,13 @@
     left: 0;
     width: 100%;
     height: var(--line-gap);
-    transition: top var(--transition);
+    transition: top var(--grid-transition, var(--transition));
     background: var(--bg);
     z-index: 11000;
     pointer-events: none;
+    will-change: top;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
 }
 
 .h-line::before,
@@ -62,9 +65,16 @@
     top: var(--top-row-1);
     width: var(--line-gap);
     height: calc(100% - var(--top-row-1));
-    transition: left var(--transition), opacity var(--transition), top var(--transition), height var(--transition);
+    transition:
+        left var(--grid-transition, var(--transition)),
+        opacity var(--grid-transition, var(--transition)),
+        top var(--grid-transition, var(--transition)),
+        height var(--grid-transition, var(--transition));
     z-index: 11000;
     pointer-events: none;
+    will-change: left, top, height;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
 }
 
 .v-line-center {
@@ -72,12 +82,12 @@
     height: calc(100% - var(--top-row-1));
 }
 
-.preset-workshop .v-line-center,
-.preset-club .v-line-center,
-.preset-diary .v-line-center,
-.preset-contact .v-line-center {
-    /* 그 외 프리셋에서는 헤더 밴드만큼 수축 */
-    height: calc(var(--top-row-2) - var(--top-row-1) + var(--line-gap));
+.grid-preset-workshop .v-line-center,
+.grid-preset-club .v-line-center,
+.grid-preset-diary .v-line-center,
+.grid-preset-contact .v-line-center {
+    /* 마커와 같은 grid 기준 높이를 사용해야 선과 마커가 분리되어 보이지 않는다. */
+    height: calc(var(--grid-top-row-2) - var(--top-row-1) + var(--line-gap));
 }
 
 /* 메인 페이지에서도 세로선 표시 */
@@ -108,97 +118,29 @@
 }
 
 .grid-row-2 {
-    top: var(--top-row-2);
-    transition: top var(--transition);
+    top: var(--grid-top-row-2);
+    transition: top var(--grid-transition, var(--transition));
+    will-change: top;
 }
 
-/* ─── 컨텐츠 영역 세로선 ─────────────── */
-/* height transition 추가 → top-row-2 변화 시 끊김 없이 이어짐 */
-.top-v-1,
-.top-v-2,
-.top-v-3 {
+/* ─── 교차점 마커 ─────────────────────── */
+.grid-intersection-marker {
     position: absolute;
     width: var(--line-gap);
-    top: var(--top-row-1);
-    height: calc(var(--top-row-2) - var(--top-row-1) + var(--line-gap));
-    transition: left var(--transition), top var(--transition), height var(--transition);
-    z-index: 11001;
-    pointer-events: none;
-    background: transparent;
-}
-
-/* 교차점 마커 (상/하) */
-.top-v-1::before,
-.top-v-1::after,
-.top-v-2::before,
-.top-v-2::after,
-.top-v-3::before,
-.top-v-3::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    width: 100%;
     height: var(--line-gap);
     background: var(--intersect);
     border: var(--line-thickness) solid var(--line);
     box-sizing: border-box;
-}
-
-.top-v-1::before,
-.top-v-2::before,
-.top-v-3::before {
-    top: 0;
-}
-
-.top-v-1::after,
-.top-v-2::after,
-.top-v-3::after {
-    bottom: 0;
-}
-
-.top-v-1 {
-    left: var(--line-x-1);
-}
-
-.top-v-2 {
-    left: var(--line-x-2);
-}
-
-.top-v-3 {
-    left: var(--line-x-3);
-}
-
-.top-v-center {
-    position: absolute;
-    width: var(--line-gap);
-    left: var(--line-x-center);
-    top: var(--top-row-1);
-    height: calc(var(--top-row-2) - var(--top-row-1) + var(--line-gap));
-    /* 가로선 grid-row-2 위치까지 확장하여 교차점 마커 표시 */
-    transition: all var(--transition);
+    transition:
+        left var(--grid-transition, var(--transition)),
+        top var(--grid-transition, var(--transition)),
+        opacity var(--grid-transition, var(--transition));
     z-index: 11001;
     pointer-events: none;
     opacity: 1;
-}
-
-.top-v-center::before,
-.top-v-center::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: var(--line-gap);
-    background: var(--intersect);
-    border: var(--line-thickness) solid var(--line);
-    box-sizing: border-box;
-}
-
-.top-v-center::before {
-    top: 0;
-}
-
-.top-v-center::after {
-    bottom: 0;
+    will-change: left, top, opacity;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
 }
 
 .v-line-center {
@@ -206,11 +148,47 @@
     /* Always visible and part of interaction */
 }
 
+.preset-workshop .v-line-center,
+.preset-workshop .grid-intersection-marker-center,
+.preset-diary .v-line-center,
+.preset-diary .grid-intersection-marker-center,
+.grid-preset-workshop .v-line-center,
+.grid-preset-workshop .grid-intersection-marker-center,
+.grid-preset-diary .v-line-center,
+.grid-preset-diary .grid-intersection-marker-center {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.grid-phase-pull {
+    --grid-transition: 440ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.grid-phase-return {
+    --grid-transition: 660ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.grid-phase-pull .v-line-center {
+    height: var(--line-gap);
+}
+
+.grid-phase-pull .grid-intersection-marker-center.grid-intersection-marker-bottom {
+    opacity: 0;
+    visibility: hidden;
+}
+
 /* ─── 콘텐츠 셀 ──────────────────────── */
 .cell {
     position: absolute;
     overflow: hidden;
-    transition: all var(--transition);
+    transition:
+        opacity var(--transition),
+        top var(--transition),
+        right var(--transition),
+        bottom var(--transition),
+        left var(--transition),
+        width var(--transition),
+        height var(--transition);
     opacity: 0;
     pointer-events: none;
 }
@@ -231,7 +209,14 @@
     width: 100%;
     height: calc(100% - var(--top-row-2));
     background: var(--bg);
-    transition: all var(--transition);
+    transition:
+        opacity var(--transition),
+        top var(--transition),
+        right var(--transition),
+        bottom var(--transition),
+        left var(--transition),
+        width var(--transition),
+        height var(--transition);
     opacity: 0;
     pointer-events: none;
     z-index: 5;
@@ -255,6 +240,43 @@
     opacity: 1;
     pointer-events: auto;
     z-index: 10;
+}
+
+.grid-phase-return .cell-member.active,
+.grid-phase-return .cell-workshop.active,
+.grid-phase-return .cell-diary.active,
+.grid-phase-return .cell-main.active {
+    transition: none;
+    transform-origin: top center;
+    isolation: isolate;
+}
+
+.grid-phase-return .cell-member.active::after,
+.grid-phase-return .cell-workshop.active::after,
+.grid-phase-return .cell-diary.active::after,
+.grid-phase-return .cell-main.active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    background: var(--bg);
+    border-bottom: var(--line-thickness) solid var(--line);
+    box-sizing: border-box;
+    transform: translateY(0);
+    transform-origin: top center;
+    animation: gridRevealCurtain var(--grid-transition) both;
+    will-change: transform;
+}
+
+@keyframes gridRevealCurtain {
+    0% {
+        transform: translateY(0);
+    }
+
+    100% {
+        transform: translateY(100%);
+    }
 }
 
 /* ─── 프리뷰 가림막 (Cover) 및 내부 ──────────────────────── */
@@ -288,20 +310,19 @@
     width: calc(var(--line-x-3) - var(--line-x-1) - var(--line-gap));
     color: #2563eb;
     background: transparent;
-    transition: all var(--transition), opacity var(--transition);
+    transition:
+        opacity var(--transition),
+        top var(--transition),
+        right var(--transition),
+        bottom var(--transition),
+        left var(--transition),
+        width var(--transition),
+        height var(--transition);
 }
 
 .cell-workshop.active {
     /* 기본값인 line1~line3를 그대로 유지하며 우선순위만 높임 */
     z-index: 10;
-}
-
-.contact-open .cell-workshop.active {
-    left: 0;
-    right: 0;
-    width: auto;
-    height: auto;
-    bottom: 0;
 }
 
 .cell-contact {
@@ -324,18 +345,19 @@
     right: 0;
     color: #9333ea;
     background: transparent;
-    transition: all var(--transition), opacity var(--transition);
+    transition:
+        opacity var(--transition),
+        top var(--transition),
+        right var(--transition),
+        bottom var(--transition),
+        left var(--transition),
+        width var(--transition),
+        height var(--transition);
 }
 
 .cell-diary.active {
     z-index: 10;
 }
-
-.contact-open .cell-diary.active {
-    left: 0;
-    bottom: 0;
-}
-
 
 .cell-main {
     position: absolute;
@@ -346,7 +368,14 @@
     color: #000000;
     font-weight: 400;
     font-size: 2.25rem;
-    transition: all var(--transition);
+    transition:
+        opacity var(--transition),
+        top var(--transition),
+        right var(--transition),
+        bottom var(--transition),
+        left var(--transition),
+        width var(--transition),
+        height var(--transition);
 }
 
 .cell-main.active {
@@ -363,8 +392,3 @@
     background: var(--bg);
     z-index: -1;
 }
-
-
-
-
-

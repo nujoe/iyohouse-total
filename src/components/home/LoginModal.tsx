@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { useLanguage } from "@/lib/i18n";
+import { useToast } from "@/context/ToastContext";
+import { TEXT } from "@/lib/i18n/translations";
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -13,6 +15,27 @@ interface LoginModalProps {
 
 type SocialProvider = "google";
 
+function getKoreanAuthError(message: string) {
+    if (!message) return "오류가 발생했습니다.";
+    const lower = message.toLowerCase();
+    if (lower.includes("invalid login credentials") || lower.includes("invalid credentials")) {
+        return "이메일 또는 비밀번호가 올바르지 않습니다.";
+    }
+    if (lower.includes("user already exists") || lower.includes("already registered")) {
+        return "이미 가입된 이메일입니다.";
+    }
+    if (lower.includes("rate limit")) {
+        return "너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+    if (lower.includes("email address is invalid") || lower.includes("invalid email")) {
+        return "올바른 이메일 주소를 입력해 주세요.";
+    }
+    if (lower.includes("password should be")) {
+        return "비밀번호는 최소 6자리 이상이어야 합니다.";
+    }
+    return message;
+}
+
 export default function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModalProps) {
     const {
         user,
@@ -21,10 +44,12 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
         signOut,
         signInWithGoogle,
         signInWithEmail,
-        signUpWithEmail
+        signUpWithEmail,
+        updateProfile,
     } = useAuth();
     const { goToCompleteProfile } = useProfileNavigation();
     const { t } = useLanguage();
+    const { showToast } = useToast();
 
     const [loginEmail, setLoginEmail] = useState("");
     const [loginPassword, setLoginPassword] = useState("");
@@ -32,6 +57,13 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
     const [loginError, setLoginError] = useState<string | null>(null);
     const [isLoginSubmitting, setIsLoginSubmitting] = useState(false);
     const [socialLoginProvider, setSocialLoginProvider] = useState<SocialProvider | null>(null);
+    const [profileFullName, setProfileFullName] = useState("");
+    const [profileEmail, setProfileEmail] = useState("");
+    const [profilePhone, setProfilePhone] = useState("");
+    const [profileBio, setProfileBio] = useState("");
+    const [profileMessage, setProfileMessage] = useState<string | null>(null);
+    const [profileError, setProfileError] = useState<string | null>(null);
+    const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -42,8 +74,22 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
             setLoginError(null);
             setIsLoginSubmitting(false);
             setSocialLoginProvider(null);
+            setProfileMessage(null);
+            setProfileError(null);
+            setIsProfileSubmitting(false);
         }
     }, [isOpen, initialMode]);
+
+    useEffect(() => {
+        if (!isOpen || !user) return;
+
+        setProfileFullName(profile?.full_name || "");
+        setProfileEmail(profile?.email || user.email || "");
+        setProfilePhone(profile?.phone || "");
+        setProfileBio(profile?.bio || "");
+        setProfileMessage(null);
+        setProfileError(null);
+    }, [isOpen, profile, user]);
 
     const handleSocialLogin = useCallback(async (provider: SocialProvider) => {
         setLoginError(null);
@@ -52,10 +98,10 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
         const { error } = await signInWithGoogle();
 
         if (error) {
-            setLoginError(error.message || t.auth.genericError);
+            setLoginError(getKoreanAuthError(error.message || TEXT.ko.auth.genericError));
             setSocialLoginProvider(null);
         }
-    }, [signInWithGoogle, t.auth.genericError]);
+    }, [signInWithGoogle]);
 
     const handleEmailAuthSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,40 +109,72 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
         setIsLoginSubmitting(true);
 
         if (!loginEmail || !loginPassword) {
-            setLoginError(t.auth.emailRequired);
+            setLoginError(TEXT.ko.auth.emailRequired);
             setIsLoginSubmitting(false);
             return;
         }
 
         if (loginPassword.length < 6) {
-            setLoginError(t.auth.passwordMin);
+            setLoginError(TEXT.ko.auth.passwordMin);
             setIsLoginSubmitting(false);
             return;
         }
 
         try {
             if (isSignUpMode) {
-                const { error } = await signUpWithEmail(loginEmail, loginPassword);
+                const { data, error } = await signUpWithEmail(loginEmail, loginPassword);
                 if (error) {
-                    setLoginError(error.message);
+                    setLoginError(getKoreanAuthError(error.message));
                 } else {
-                    alert(t.auth.signupDone);
-                    onClose();
+                    if (data && !(data as any).session) {
+                        showToast("success", TEXT.ko.auth.signupEmailSent);
+                        onClose();
+                    } else {
+                        onClose();
+                        goToCompleteProfile();
+                    }
                 }
             } else {
                 const { error } = await signInWithEmail(loginEmail, loginPassword);
                 if (error) {
-                    setLoginError(error.message);
+                    setLoginError(getKoreanAuthError(error.message));
                 } else {
                     onClose();
                 }
             }
         } catch (err: any) {
-            setLoginError(err.message || t.auth.genericError);
+            setLoginError(getKoreanAuthError(err.message || TEXT.ko.auth.genericError));
         } finally {
             setIsLoginSubmitting(false);
         }
-    }, [isSignUpMode, loginEmail, loginPassword, signInWithEmail, signUpWithEmail, t, onClose]);
+    }, [goToCompleteProfile, isSignUpMode, loginEmail, loginPassword, onClose, showToast, signInWithEmail, signUpWithEmail]);
+
+    const handleProfileSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setProfileMessage(null);
+        setProfileError(null);
+
+        if (!profileFullName.trim() || !profileEmail.trim() || !profilePhone.trim()) {
+            setProfileError("이름, 이메일, 전화번호를 입력해 주세요.");
+            return;
+        }
+
+        setIsProfileSubmitting(true);
+        const { error } = await updateProfile({
+            full_name: profileFullName.trim(),
+            email: profileEmail.trim(),
+            phone: profilePhone.trim(),
+            bio: profileBio.trim(),
+        });
+        setIsProfileSubmitting(false);
+
+        if (error) {
+            setProfileError(getKoreanAuthError(error));
+            return;
+        }
+
+        setProfileMessage("회원정보가 저장되었습니다.");
+    }, [profileBio, profileEmail, profileFullName, profilePhone, updateProfile]);
 
     if (!isOpen) return null;
 
@@ -139,17 +217,88 @@ export default function LoginModal({ isOpen, onClose, initialMode = "login" }: L
                             ) : (
                                 /* 프로필 완성: 일반 로그인 상태 */
                                 <div className="profile-welcome-container" style={{ marginTop: '24px' }}>
-                                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{t.auth.welcome(profile?.full_name)}</div>
-                                    <div style={{ marginTop: '8px', fontSize: '14px', opacity: 0.6 }}>{user.email}</div>
-
-                                    <div className="profile-info-display" style={{ marginTop: '20px', textAlign: 'left', background: '#f9f9f9', padding: '15px', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '12px', opacity: 0.5 }}>{t.auth.bioLabel}</div>
-                                        <div style={{ marginTop: '5px', fontSize: '14px', lineHeight: '1.5' }}>{profile?.bio || t.auth.noBio}</div>
+                                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{t.auth.editProfile}</div>
+                                    <div style={{ marginTop: '8px', fontSize: '13px', opacity: 0.6 }}>
+                                        {t.auth.welcome(profile?.full_name)}
                                     </div>
+
+                                    <form className="profile-edit-form" onSubmit={handleProfileSubmit}>
+                                        <label className="complete-profile-label" htmlFor="profile-edit-name">
+                                            {t.auth.nameLabel}
+                                        </label>
+                                        <input
+                                            id="profile-edit-name"
+                                            className="login-input"
+                                            type="text"
+                                            value={profileFullName}
+                                            onChange={(event) => setProfileFullName(event.target.value)}
+                                            required
+                                            disabled={isProfileSubmitting}
+                                        />
+
+                                        <label className="complete-profile-label" htmlFor="profile-edit-email">
+                                            {t.auth.email}
+                                        </label>
+                                        <input
+                                            id="profile-edit-email"
+                                            className="login-input"
+                                            type="email"
+                                            value={profileEmail}
+                                            onChange={(event) => setProfileEmail(event.target.value)}
+                                            required
+                                            disabled={isProfileSubmitting}
+                                        />
+
+                                        <label className="complete-profile-label" htmlFor="profile-edit-phone">
+                                            {t.auth.phoneLabel}
+                                        </label>
+                                        <input
+                                            id="profile-edit-phone"
+                                            className="login-input"
+                                            type="tel"
+                                            value={profilePhone}
+                                            onChange={(event) => setProfilePhone(event.target.value)}
+                                            required
+                                            disabled={isProfileSubmitting}
+                                        />
+
+                                        <label className="complete-profile-label" htmlFor="profile-edit-bio">
+                                            {t.auth.bioLabel}
+                                        </label>
+                                        <textarea
+                                            id="profile-edit-bio"
+                                            className="login-input login-textarea"
+                                            value={profileBio}
+                                            onChange={(event) => setProfileBio(event.target.value)}
+                                            placeholder={t.auth.bioPlaceholder}
+                                            rows={4}
+                                            disabled={isProfileSubmitting}
+                                        />
+                                        <p className="profile-helper-text">{t.auth.bioHelper}</p>
+
+                                        {profileError && (
+                                            <div className="profile-form-status error" role="alert">
+                                                {profileError}
+                                            </div>
+                                        )}
+                                        {profileMessage && (
+                                            <div className="profile-form-status success" role="status">
+                                                {profileMessage}
+                                            </div>
+                                        )}
+
+                                        <button
+                                            className="email-submit-btn"
+                                            type="submit"
+                                            disabled={isProfileSubmitting}
+                                        >
+                                            {isProfileSubmitting ? t.auth.submitting : t.auth.saveProfile}
+                                        </button>
+                                    </form>
 
                                     <button
                                         className="email-submit-btn"
-                                        style={{ marginTop: '30px' }}
+                                        style={{ marginTop: '12px' }}
                                         onClick={async () => { await signOut(); onClose(); }}
                                     >
                                         {t.auth.logout}

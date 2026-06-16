@@ -247,6 +247,11 @@
     line-height: 1.2;
 }
 
+.detail-main-title .detail-title-hangul {
+    font-family: var(--font-gowun-batang), 'Gowun Batang', var(--font-noto-serif), serif;
+    font-weight: 700;
+}
+
 .tag-closed-detail {
     background: #000;
     color: #fff;
@@ -636,6 +641,19 @@
 .action-btn:hover {
     transform: scale(1.02);
     filter: brightness(1.1);
+}
+
+.action-btn.registered-status-btn {
+    background: #000;
+    color: #fff;
+    border: none;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.action-btn.registered-status-btn:hover {
+    transform: none;
+    filter: none;
 }
 
 @media (max-width: 1000px) {

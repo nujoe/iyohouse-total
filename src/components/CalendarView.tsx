@@ -26,7 +26,7 @@ const getAuthorColor = (author?: string) => {
     }
 };
 
-function PopoverCard({ activeEvent, onClose }: { activeEvent: { event: any; rect: DOMRect }; onClose: () => void }) {
+function PopoverCard({ activeEvent, onClose }: { activeEvent: { event: any; rect: DOMRect; clickedDate?: string }; onClose: () => void }) {
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +61,7 @@ function PopoverCard({ activeEvent, onClose }: { activeEvent: { event: any; rect
     }, [activeEvent]);
 
     const { title, date, time, description, author } = activeEvent.event;
+    const displayDate = activeEvent.clickedDate || date;
 
     return (
         <div
@@ -86,7 +87,7 @@ function PopoverCard({ activeEvent, onClose }: { activeEvent: { event: any; rect
             </div>
             <div className="popover-body">
                 <div className="popover-meta">
-                    <span className="popover-date">{date}</span>
+                    <span className="popover-date">{displayDate}</span>
                     {time && <span className="popover-time">{time}</span>}
                     {author && <span className="popover-author">작성자: {author}</span>}
                 </div>
@@ -104,7 +105,7 @@ function CalendarView({
     calendarEvents
 }: CalendarViewProps) {
     const [today, setToday] = useState<Date | null>(null);
-    const [activeEvent, setActiveEvent] = useState<{ event: any; rect: DOMRect } | null>(null);
+    const [activeEvent, setActiveEvent] = useState<{ event: any; rect: DOMRect; clickedDate?: string } | null>(null);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -120,7 +121,7 @@ function CalendarView({
         const todayMonth = today?.getMonth();
         const todayDate = today?.getDate();
 
-        const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+        const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const prevMonthDays = new Date(year, month, 0).getDate();
         const weekCount = Math.ceil((firstDay + daysInMonth) / 7);
@@ -131,7 +132,13 @@ function CalendarView({
             const displayNum = isCurrMonth ? dayNum : (dayNum <= 0 ? prevMonthDays + dayNum : dayNum - daysInMonth);
 
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-            const dayEvents = isCurrMonth ? calendarEvents.filter(e => e.date === dateStr) : [];
+            const dayEvents = isCurrMonth 
+                ? calendarEvents.filter(e => {
+                    if (e.date === dateStr) return true;
+                    if (Array.isArray(e.dates) && e.dates.includes(dateStr)) return true;
+                    return false;
+                }) 
+                : [];
             const isToday = Boolean(today) && isCurrMonth && year === todayYear && month === todayMonth && dayNum === todayDate;
 
             return {
@@ -139,6 +146,7 @@ function CalendarView({
                 isCurrMonth,
                 isToday,
                 dayEvents,
+                dateStr,
                 key: i
             };
         });
@@ -147,13 +155,13 @@ function CalendarView({
     }, [currentMonth, calendarEvents, today]);
 
     const todayDayIndex = useMemo(() => {
-        return today ? (today.getDay() + 6) % 7 : null;
+        return today ? today.getDay() : null;
     }, [today]);
 
-    const handleEventClick = (e: React.MouseEvent, evt: any) => {
+    const handleEventClick = (e: React.MouseEvent, evt: any, clickedDate: string) => {
         e.stopPropagation();
         const rect = e.currentTarget.getBoundingClientRect();
-        setActiveEvent({ event: evt, rect });
+        setActiveEvent({ event: evt, rect, clickedDate });
     };
 
     return (
@@ -171,7 +179,7 @@ function CalendarView({
             </header>
 
             <div className="calendar-grid-header">
-                {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((day, index) => (
+                {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((day, index) => (
                     <div
                         key={day}
                         className={`grid-header-cell ${index === todayDayIndex ? 'is-today-day' : ''}`}
@@ -195,7 +203,7 @@ function CalendarView({
                                 key={idx}
                                 className="event-box"
                                 style={{ "--idx": idx } as any}
-                                onClick={(e) => handleEventClick(e, evt)}
+                                onClick={(e) => handleEventClick(e, evt, day.dateStr)}
                             >
                                 {evt.author && (
                                     <span

@@ -134,8 +134,9 @@
     background: #000;
     color: #fff;
     padding: 18px;
+    font-family: var(--font-gowun-batang), 'Gowun Batang', serif;
     font-size: 1.1rem;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
     border: none;
     transition: opacity 0.2s;
@@ -149,4 +150,13 @@
 .form-submit-btn-classic:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.form-validation-error-msg {
+    color: #ff3b30;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    margin-top: 5px;
+    font-family: var(--font-gowun-batang), 'Gowun Batang', serif;
 }

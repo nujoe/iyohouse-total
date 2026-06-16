@@ -130,8 +130,9 @@
     .grid-header-cell:not(:last-child)::after {
         width: 8px !important;
         height: 8px !important;
-        bottom: -4.5px !important;
-        right: -4.5px !important;
+        bottom: 0 !important;
+        right: 0 !important;
+        transform: translate(50%, 50%) rotate(45deg) !important;
     }
 
     /* Workshop Detail Responsive */
@@ -298,8 +299,9 @@
     left: 0;
     width: 100%;
     background: #fff;
-    border: 2px solid #000;
-    padding: 0;
+    border: 1px solid #000;
+    border-radius: 6px;
+    padding: 4px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     max-height: 250px;
     overflow-y: auto;
@@ -326,18 +328,16 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    border-bottom: 1px solid #eee;
+    border: 1px solid transparent;
+    border-radius: 4px;
     transition: all 0.2s ease;
     text-align: left;
     background: #fff;
-    border-left: none;
-    border-right: none;
-    border-top: none;
     font-family: inherit;
 }
 
 .schedule-option:last-child {
-    border-bottom: none;
+    border-bottom: 1px solid transparent;
 }
 
 /* ─── 방명록 인덱스 모달 ──────────────── */
@@ -356,7 +356,14 @@
 
 
 .schedule-option:hover {
-    background: #f8f8f8;
+    background: var(--tag-yellow);
+    border-color: var(--tag-yellow);
+    color: #000;
+}
+
+.schedule-option:hover .s-date,
+.schedule-option:hover .s-time {
+    color: #000;
 }
 
 .schedule-option .s-date {

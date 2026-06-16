@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
-import { loadTossPayments } from "@tosspayments/payment-sdk";
+import { useToast } from "@/context/ToastContext";
+import { TEXT } from "@/lib/i18n/translations";
+import MixedWorkshopTitle from "@/components/workshop/MixedWorkshopTitle";
 import WorkshopDetailPoster from "@/components/workshop/WorkshopDetailPoster";
 import {
     getLocalizedCurriculumItem,
@@ -23,6 +25,130 @@ interface WorkshopDetailOverlayProps {
     onRequireLogin: () => void;
 }
 
+declare global {
+    interface Window {
+        AUTHNICE?: {
+            requestPay: (payload: Record<string, unknown>) => void;
+        };
+        iyohouseNicepayScriptPromises?: Record<string, Promise<void> | undefined>;
+    }
+}
+
+type NicepayCheckoutResponse = {
+    success: boolean;
+    error?: string;
+    scriptUrl?: string;
+    payload?: Record<string, unknown>;
+};
+
+const NICEPAY_READY_TIMEOUT_MS = 8000;
+const NICEPAY_READY_INTERVAL_MS = 50;
+
+function isNicepayReady() {
+    return Boolean(window.AUTHNICE && typeof window.AUTHNICE.requestPay === "function");
+}
+
+function waitForNicepayReady(timeoutMs = NICEPAY_READY_TIMEOUT_MS) {
+    const startedAt = Date.now();
+
+    return new Promise<void>((resolve, reject) => {
+        const check = () => {
+            if (isNicepayReady()) {
+                resolve();
+                return;
+            }
+
+            if (Date.now() - startedAt >= timeoutMs) {
+                reject(new Error("NICEPAY SDK is not ready"));
+                return;
+            }
+
+            window.setTimeout(check, NICEPAY_READY_INTERVAL_MS);
+        };
+
+        check();
+    });
+}
+
+function loadNicepayScript(scriptUrl: string) {
+    if (isNicepayReady()) {
+        return Promise.resolve();
+    }
+
+    if (!scriptUrl) {
+        return Promise.reject(new Error("missing NICEPAY script URL"));
+    }
+
+    window.iyohouseNicepayScriptPromises = window.iyohouseNicepayScriptPromises || {};
+
+    if (window.iyohouseNicepayScriptPromises[scriptUrl]) {
+        return window.iyohouseNicepayScriptPromises[scriptUrl];
+    }
+
+    window.iyohouseNicepayScriptPromises[scriptUrl] = new Promise((resolve, reject) => {
+        const existing = Array.from(document.scripts).find((script) => script.src === scriptUrl);
+
+        if (existing) {
+            existing.addEventListener("load", () => {
+                existing.dataset.iyohouseNicepayLoaded = "true";
+                waitForNicepayReady().then(resolve, reject);
+            }, { once: true });
+            existing.addEventListener("error", () => reject(new Error("NICEPAY script failed")), { once: true });
+
+            if (existing.dataset.iyohouseNicepayLoaded === "true") {
+                waitForNicepayReady().then(resolve, reject);
+            }
+
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = scriptUrl;
+        script.async = true;
+        script.addEventListener("load", () => {
+            script.dataset.iyohouseNicepayLoaded = "true";
+            waitForNicepayReady().then(resolve, reject);
+        }, { once: true });
+        script.addEventListener("error", () => reject(new Error("NICEPAY script failed")), { once: true });
+        document.head.appendChild(script);
+    });
+
+    return window.iyohouseNicepayScriptPromises[scriptUrl];
+}
+
+function nicepayErrorMessage(result: unknown) {
+    if (!result || typeof result !== "object") {
+        return "NICEPAY 결제창을 열지 못했습니다.";
+    }
+
+    const record = result as Record<string, unknown>;
+    const message = record.errorMsg || record.resultMsg || record.message;
+
+    return typeof message === "string" && message ? message : "NICEPAY 결제창을 열지 못했습니다.";
+}
+
+function getUserFacingPaymentError(message: string, fallback: string) {
+    if (!message) return fallback;
+    const lower = message.toLowerCase();
+    if (lower.includes("active registration") || lower.includes("already registered") || lower.includes("already applied")) {
+        return "이미 신청한 워크숍입니다.";
+    }
+    if (lower.includes("db uuid") || lower.includes("uuid missing")) {
+        return "아직 신청 준비 중인 워크숍입니다. 잠시 후 다시 시도하거나 문의해 주세요.";
+    }
+    if (lower.includes("nicepay") || lower.includes("환경 변수")) {
+        return "결제창을 열지 못했습니다. 잠시 후 다시 시도하거나 문의해 주세요.";
+    }
+    return "신청/결제 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+}
+
+function shouldFallbackToLegacyRegistrationRpc(error: any) {
+    const message = String(error?.message || "");
+    const code = String(error?.code || "");
+
+    return code === "PGRST202" || message.includes("p_schedule_") || message.includes("Could not find the function");
+}
+
 export default function WorkshopDetailOverlay({
     workshop,
     t,
@@ -32,21 +158,40 @@ export default function WorkshopDetailOverlay({
 }: WorkshopDetailOverlayProps) {
     const { user, isProfileComplete, supabase } = useAuth();
     const { goToCompleteProfile } = useProfileNavigation();
+    const { showToast } = useToast();
 
     const [showSchedule, setShowSchedule] = useState(false);
     const [selectedSession, setSelectedSession] = useState<any | null>(null);
     const [showRefundPolicy, setShowRefundPolicy] = useState(false);
-    const [tossPayments, setTossPayments] = useState<any>(null);
+    const [nicepayScriptUrl, setNicepayScriptUrl] = useState("");
     const [isPaymentStarting, setIsPaymentStarting] = useState(false);
+    const [isRegistered, setIsRegistered] = useState(false);
 
     useEffect(() => {
-        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-        if (!clientKey) {
-            console.error('[TossPayments] NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.');
+        if (!user || !workshop?.supabase_workshop_id) {
+            setIsRegistered(false);
             return;
         }
-        loadTossPayments(clientKey).then(setTossPayments);
-    }, []);
+
+        const checkRegistration = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('workshop_registrations_v2')
+                    .select('id')
+                    .eq('workshop_id', workshop.supabase_workshop_id)
+                    .eq('user_id', user.id)
+                    .in('status', ['pending', 'confirmed'])
+                    .maybeSingle();
+
+                if (error) throw error;
+                setIsRegistered(!!data);
+            } catch (err) {
+                console.error("Error checking registration:", err);
+            }
+        };
+
+        checkRegistration();
+    }, [user, workshop?.supabase_workshop_id, supabase]);
 
     const getWorkshopCapacity = useCallback((ws: any) =>
         typeof ws?.capacity === 'number' ? ws.capacity : 8, []);
@@ -87,58 +232,83 @@ export default function WorkshopDetailOverlay({
 
         const dbWorkshopId = ws.supabase_workshop_id;
         if (!dbWorkshopId) {
-            alert(t.workshop.missingDbId);
+            showToast("error", TEXT.ko.workshop.missingDbId);
             return;
         }
 
         if (isWorkshopClosedForPayment(ws)) {
-            alert(t.workshop.closedAlert);
+            showToast("error", TEXT.ko.workshop.closedAlert);
             return;
         }
 
         if (hasSelectableSchedule(ws) && !selectedSession) {
-            alert(t.workshop.scheduleRequired);
+            showToast("error", TEXT.ko.workshop.scheduleRequired);
             setShowSchedule(true);
             return;
         }
 
         setIsPaymentStarting(true);
 
-        let payments = tossPayments;
         try {
-            if (!payments) {
-                const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-                if (!clientKey) {
-                    alert(t.workshop.paymentMisconfigured);
-                    return;
-                }
-                payments = await loadTossPayments(clientKey);
-                setTossPayments(payments);
-            }
-
-            if (!payments) {
-                alert(t.workshop.paymentPreparing);
-                return;
-            }
-
-            const { data: regData, error: rpcError } = await supabase.rpc('create_pending_registration', {
+            const selectedSchedule = selectedSession ? getLocalizedScheduleSession(selectedSession, language) : null;
+            const scheduleLabel = selectedSession ? getScheduleSessionLabel(selectedSession, language) : "";
+            const scheduleDate = selectedSchedule?.date || selectedSession?.date || "";
+            const scheduleTime = selectedSchedule?.time || selectedSession?.time || "";
+            const scheduleKey = selectedSession?._key || [selectedSession?.date, selectedSession?.time].filter(Boolean).join("-");
+            const registrationPayload = {
                 p_workshop_id: dbWorkshopId,
-            });
+                p_schedule_key: scheduleKey || null,
+                p_schedule_label: scheduleLabel || null,
+                p_schedule_date: scheduleDate || null,
+                p_schedule_time: scheduleTime || null,
+            };
+            let { data: regData, error: rpcError } = await supabase.rpc('create_pending_registration', registrationPayload);
+
+            if (rpcError && shouldFallbackToLegacyRegistrationRpc(rpcError)) {
+                const legacyResult = await supabase.rpc('create_pending_registration', {
+                    p_workshop_id: dbWorkshopId,
+                });
+                regData = legacyResult.data;
+                rpcError = legacyResult.error;
+            }
 
             if (rpcError) throw rpcError;
 
-            const { registration_id, order_id, amount, workshop_title } = regData;
+            const { registration_id, workshop_title } = regData;
+            const orderName = workshop_title || getLocalizedWorkshopTitle(ws, language, t) || t.workshop.fallbackTitle(ws.number || ws.id);
+            const checkoutResponse = await fetch("/api/payment/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    registration_id,
+                    orderName,
+                    scheduleLabel,
+                    method: "card",
+                }),
+            });
+            const checkout = await checkoutResponse.json() as NicepayCheckoutResponse;
 
-            await payments.requestPayment('카드', {
-                amount: amount,
-                orderId: order_id,
-                orderName: workshop_title || getLocalizedWorkshopTitle(ws, language, t) || t.workshop.fallbackTitle(ws.number || ws.id),
-                successUrl: `${window.location.origin}/payment/success?registration_id=${registration_id}${selectedSession ? `&schedule=${encodeURIComponent(getScheduleSessionLabel(selectedSession, language))}` : ''}`,
-                failUrl: `${window.location.origin}/payment/fail?registration_id=${registration_id}`,
+            if (!checkoutResponse.ok || !checkout.success || !checkout.payload || !checkout.scriptUrl) {
+                throw new Error(checkout.error || t.workshop.paymentMisconfigured);
+            }
+
+            setNicepayScriptUrl(checkout.scriptUrl);
+            await loadNicepayScript(checkout.scriptUrl);
+
+            if (!window.AUTHNICE || typeof window.AUTHNICE.requestPay !== "function") {
+                throw new Error(t.workshop.paymentPreparing);
+            }
+
+            window.AUTHNICE.requestPay({
+                ...checkout.payload,
+                fnError: (result: unknown) => {
+                    showToast("error", nicepayErrorMessage(result));
+                    setIsPaymentStarting(false);
+                },
             });
         } catch (error: any) {
             console.error("신청/결제 요청 에러:", error);
-            alert(`${t.workshop.requestError}: ${error.message || t.auth.genericError}`);
+            showToast("error", getUserFacingPaymentError(error.message, "신청/결제 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."));
         } finally {
             setIsPaymentStarting(false);
         }
@@ -150,7 +320,7 @@ export default function WorkshopDetailOverlay({
         isWorkshopClosedForPayment,
         hasSelectableSchedule,
         selectedSession,
-        tossPayments,
+        nicepayScriptUrl,
         onRequireLogin,
         goToCompleteProfile,
         supabase,
@@ -168,7 +338,10 @@ export default function WorkshopDetailOverlay({
                                 <span className="pills pill-yellow">WORKSHOP</span>
                             </div>
                             <div className="detail-title-wrapper">
-                                <div className="detail-main-title">{getLocalizedWorkshopTitle(workshop, language, t)}</div>
+                                <MixedWorkshopTitle
+                                    className="detail-main-title"
+                                    title={getLocalizedWorkshopTitle(workshop, language, t)}
+                                />
                             </div>
                         </div>
                         <div className="detail-description">
@@ -289,17 +462,22 @@ export default function WorkshopDetailOverlay({
                                     )}
                                 </div>
                             )}
-                            <button
-                                className={`action-btn fill-btn ${hasSelectableSchedule(workshop) && !selectedSession ? 'locked' : ''}`}
-                                disabled={isPaymentStarting || isWorkshopClosedForPayment(workshop)}
-                                onClick={() => handleWorkshopPayment(workshop)}
-                            >
-                                {isWorkshopClosedForPayment(workshop)
-                                    ? t.workshop.closed
-                                    : isPaymentStarting
-                                        ? t.workshop.paymentPreparing
+                            {isRegistered ? (
+                                <button className="action-btn registered-status-btn" disabled>
+                                    {t.workshop.alreadyApplied}
+                                </button>
+                            ) : (
+                                <button
+                                    className={`action-btn fill-btn ${hasSelectableSchedule(workshop) && !selectedSession ? 'locked' : ''}`}
+                                    disabled={isPaymentStarting || isWorkshopClosedForPayment(workshop)}
+                                    aria-busy={isPaymentStarting}
+                                    onClick={() => handleWorkshopPayment(workshop)}
+                                >
+                                    {isWorkshopClosedForPayment(workshop)
+                                        ? t.workshop.closed
                                         : t.workshop.apply}
-                            </button>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
