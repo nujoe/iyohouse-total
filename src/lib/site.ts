@@ -1,7 +1,7 @@
 export const SITE_NAME = "IYOHOUSE";
 
 export const SITE_DESCRIPTION =
-  "이요하우스는 창작자를 위한 워크숍, 실험, 모임을 운영하는 서울 기반 크리에이티브 공간입니다.";
+  "이요하우스는 창작자를 위한 자유실험공간입니다. 2025년 ‘공공공원’이라는 이름으로 시작해, 워크숍과 동아리, 각종 이벤트가 열리는 공간으로 운영되고 있습니다.";
 
 export const SITE_URL = normalizeSiteUrl(
   process.env.NEXT_PUBLIC_SITE_URL || "https://iyohouse.com",
