@@ -135,7 +135,7 @@
     opacity: 0;
     pointer-events: none;
     align-items: flex-start;
-    font-family: 'courier', serif;
+    font-family: 'courier', var(--font-noto-sans), 'Noto Sans KR', system-ui, sans-serif;
 }
 
 .sidebar-nav-top {
@@ -172,7 +172,7 @@
     height: auto;
     border: none;
     background: transparent;
-    font-family: 'courier', serif;
+    font-family: 'courier', var(--font-noto-sans), 'Noto Sans KR', system-ui, sans-serif;
     padding: 0 15px 0 var(--side-pad-left, 20px);
     margin: 0;
     margin-left: calc(-1 * var(--side-pad-left, 20px));

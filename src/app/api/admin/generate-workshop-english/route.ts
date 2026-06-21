@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { GeminiClient } from '@/features/iyohouse-chatbot/server/gemini-client'
+import { getSupabaseServerClient } from '@/lib/supabase/admin'
+import { createClient as createSupabaseSessionClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -75,6 +77,63 @@ function getRequestApiKey(body: any) {
   return ''
 }
 
+function hasValidBearerToken(request: Request) {
+  const secret = process.env.ADMIN_SYNC_SECRET
+  if (!secret) return false
+
+  const authHeader = request.headers.get('authorization') ?? ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+
+  return Boolean(token && token === secret)
+}
+
+async function verifyAdminAccess(request: Request):
+  Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  if (hasValidBearerToken(request)) return { ok: true }
+
+  try {
+    const supabase = await createSupabaseSessionClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { success: false, error: 'Unauthorized - admin session or Bearer token is required.' },
+          { status: 401 },
+        ),
+      }
+    }
+
+    const supabaseAdmin = getSupabaseServerClient()
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, is_super_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profileError || !profile?.is_super_admin) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { success: false, error: 'Forbidden - super admin access is required.' },
+          { status: 403 },
+        ),
+      }
+    }
+
+    return { ok: true }
+  } catch (error) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { success: false, error: error instanceof Error ? error.message : 'Admin auth failed.' },
+        { status: 401 },
+      ),
+    }
+  }
+}
+
 function extractJson(text: string): WorkshopTranslationResponse {
   const trimmed = text.trim()
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
@@ -133,6 +192,9 @@ function normalizeTranslation(parsed: WorkshopTranslationResponse) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await verifyAdminAccess(request)
+    if (!auth.ok) return auth.response
+
     const body = await request.json()
     const document = body?.document
 
