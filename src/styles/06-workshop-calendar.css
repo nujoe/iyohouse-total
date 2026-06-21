@@ -154,7 +154,7 @@
     text-align: center;
     border-right: none;
     font-weight: 500;
-    font-size: 18px;
+    font-size: 21px;
     background: transparent;
     font-family: 'courier', serif;
     text-transform: lowercase;
@@ -176,7 +176,29 @@
 
 .grid-header-cell.is-today-day {
     background: transparent !important;
+    color: #000000 !important;
     font-weight: 900 !important;
+}
+
+.grid-header-cell.is-today-day::before {
+    content: "";
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 38px;
+    height: 5px;
+    background: var(--intersect);
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .grid-header-cell {
+        font-size: 16px;
+    }
+    .grid-header-cell.is-today-day::before {
+        display: none !important;
+    }
 }
 
 .calendar-grid {
