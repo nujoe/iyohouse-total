@@ -85,7 +85,7 @@ function resetIdlePosition(current: ChatbotPosition): ChatbotPosition {
 }
 
 function getChatbotBounds(chatbotElement: HTMLElement | null): ChatbotBounds {
-  const chatbotWidth = chatbotElement?.getBoundingClientRect().width || 122;
+  const chatbotWidth = chatbotElement?.getBoundingClientRect().width || 88;
   const infoRect = document.querySelector(".info-bottom-text-wrapper")?.getBoundingClientRect();
   const rightGridRects = [
     ...Array.from(document.querySelectorAll(".top-v-3")),
@@ -279,10 +279,7 @@ export default function ChatbotWidget() {
         }}
       >
         <div className="iyo-chatbot-inner-avatar">
-          <span className="iyo-chatbot-face">(=ˆ ･ ˆ=)</span>
-          <span className="iyo-chatbot-tail" aria-hidden="true">
-            ⌒
-          </span>
+          <img src="/logo.png" alt="iyohouse logo" className="iyo-chatbot-logo-img" />
         </div>
       </button>
 
