@@ -85,7 +85,7 @@ function resetIdlePosition(current: ChatbotPosition): ChatbotPosition {
 }
 
 function getChatbotBounds(chatbotElement: HTMLElement | null): ChatbotBounds {
-  const chatbotWidth = chatbotElement?.getBoundingClientRect().width || 122;
+  const chatbotWidth = chatbotElement?.getBoundingClientRect().width || 88;
   const infoRect = document.querySelector(".info-bottom-text-wrapper")?.getBoundingClientRect();
   const rightGridRects = [
     ...Array.from(document.querySelectorAll(".top-v-3")),
@@ -129,10 +129,7 @@ export default function ChatbotWidget() {
   const [position, setPosition] = useState<ChatbotPosition>({ x: null, y: 0 });
   const settingsEnabled = chatbotConfig.settingsEnabled;
 
-  const statusText = useMemo(() => {
-    if (!health) return "sidecar 확인 중";
-    return [health.pageSource, health.llmMode].filter(Boolean).join(" · ") || "wiki harness";
-  }, [health]);
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -282,10 +279,7 @@ export default function ChatbotWidget() {
         }}
       >
         <div className="iyo-chatbot-inner-avatar">
-          <span className="iyo-chatbot-face">(=ˆ ･ ˆ=)</span>
-          <span className="iyo-chatbot-tail" aria-hidden="true">
-            ⌒
-          </span>
+          <img src="/logo.png" alt="iyohouse logo" className="iyo-chatbot-logo-img" />
         </div>
       </button>
 
@@ -293,8 +287,7 @@ export default function ChatbotWidget() {
         <section className="iyo-chatbot-popover" aria-label="이요하우스 챗봇">
           <div className="iyo-chatbot-header">
             <div>
-              <p>iyohouse wiki</p>
-              <strong>{statusText}</strong>
+              <p>iyohouse 챗봇</p>
             </div>
             {messages.length > 1 ? (
               <button
